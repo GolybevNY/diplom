@@ -1,0 +1,47 @@
+{
+  "internal_ip_address_app_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.7"
+  },
+  "internal_ip_address_db01_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.5"
+  },
+  "internal_ip_address_db02_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.11"
+  },
+  "internal_ip_address_gitlab_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.32"
+  },
+  "internal_ip_address_monitoring_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.18"
+  },
+  "internal_ip_address_proxy_lan_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.101.100"
+  },
+  "internal_ip_address_proxy_wan_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "51.250.10.250"
+  },
+  "internal_ip_address_runner_yandex_cloud": {
+    "sensitive": false,
+    "type": "string",
+    "value": "192.168.102.25"
+  },
+  "workspace": {
+    "sensitive": false,
+    "type": "string",
+    "value": "stage"
+  }
+}

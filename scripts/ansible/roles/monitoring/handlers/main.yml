@@ -1,0 +1,32 @@
+---
+- name: restart prometheus
+  become: true
+  systemd:
+    daemon_reload: true
+    enabled: yes
+    name: prometheus
+    state: restarted
+
+- name: reload prometheus
+  become: true
+  systemd:
+    name: prometheus
+    state: reloaded
+
+- name: restart alertmanager
+  service:
+    name: alertmanager
+    state: restarted
+
+- name: reload alertmanager
+  service:
+    name: alertmanager
+    state: reloaded
+
+- name: restart alertmanager
+  become: true
+  systemd:
+    daemon_reload: yes
+    enabled: yes
+    name: alertmanager
+    state: restarted

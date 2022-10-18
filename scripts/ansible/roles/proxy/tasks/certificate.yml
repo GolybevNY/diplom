@@ -1,0 +1,25 @@
+---
+- name: Check if certificate already exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ domain_name }}/cert.pem"
+  register: letsencrypt_cert
+
+- name: Force generation of a new certificate
+  shell: >
+    certbot certonly --nginx --force-renewal --email '{{ letsencrypt_email }}'
+    --agree-tos --no-eff-email -d '{{ domain_name }}'
+    -d 'www.{{ domain_name }}' -d 'gitlab.{{ domain_name  }}'
+    -d 'grafana.{{ domain_name  }}' -d 'prometheus.{{ domain_name }}'
+    -d 'alertmanager.{{ domain_name }}'
+    {% if ansible_distribution_version >= "20.04" %} --non-interactive {% endif %}
+    {% if letsencrypt_staging %} --staging {% endif %}
+    {% if break_my_certs  %} --break-my-certs {% endif %}
+  #when: not letsencrypt_cert.stat.exists
+
+- name: Add cron job for certbot renewal 
+  cron:
+    name: Certbot automatic renewal
+    job: "certbot renew"
+    month: "*/2"
+
+- import_tasks: conf.yml

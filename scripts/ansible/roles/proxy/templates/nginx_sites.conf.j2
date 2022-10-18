@@ -1,0 +1,113 @@
+upstream app {
+    server app.golubevny.site:80;
+  }
+upstream gitlab {
+    server gitlab.golubevny.site:80;
+  }
+upstream grafana {
+    server monitoring.golubevny.site:3000;
+  }
+upstream prometheus {
+    server monitoring.golubevny.site:9090;
+  }
+upstream alertmanager {
+    server monitoring.golubevny.site:9093;
+  }
+server {
+    listen 80;
+    return 301 https://$host$request_uri;
+}
+
+server {
+  listen               443 ssl;
+  server_name          {{ domain_name }} www.{{ domain_name }};
+  access_log           /var/log/nginx/{{ domain_name }}_access.log;
+  error_log            /var/log/nginx/{{ domain_name }}_error.log;
+
+  ssl on;
+  ssl_certificate      /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem; 
+  ssl_certificate_key  /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+  proxy_ssl_server_name on;
+  proxy_ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+  #include              /etc/letsencrypt/options-ssl-nginx.conf;
+  location / {
+    proxy_pass         http://app;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Frame-Options SAMEORIGIN;
+  }
+}
+
+server {
+  listen          443 ssl;
+  server_name     gitlab.{{ domain_name }};
+  access_log           /var/log/nginx/gitlab.{{ domain_name }}_access.log;
+  error_log            /var/log/nginx/gitlab.{{ domain_name }}_error.log;
+  ssl_certificate      /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+  include              /etc/letsencrypt/options-ssl-nginx.conf;
+  location / {
+    proxy_pass         http://gitlab;
+    proxy_set_header   Host $http_host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Host $http_host;
+    proxy_set_header   X-Forwarded-Proto https;
+  }
+}
+
+server {
+  listen          443 ssl;
+  server_name     grafana.{{ domain_name }};
+  access_log           /var/log/nginx/grafana.{{ domain_name }}_access.log;
+  error_log            /var/log/nginx/grafana.{{ domain_name }}_error.log;
+  ssl_certificate      /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+  include              /etc/letsencrypt/options-ssl-nginx.conf;
+  location / {
+    proxy_pass         http://grafana;
+    proxy_set_header   Host $http_host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Host $http_host;
+    proxy_set_header   X-Forwarded-Proto https;
+  }
+}
+
+server {
+  listen          443 ssl;
+  server_name     prometheus.{{ domain_name }};
+  access_log           /var/log/nginx/prometheus.{{ domain_name }}_access_log;
+  error_log            /var/log/nginx/prometheus.{{ domain_name }}_error_log;
+  ssl_certificate      /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+  include              /etc/letsencrypt/options-ssl-nginx.conf;
+  location / {
+    proxy_pass         http://prometheus;
+    proxy_set_header   Host $http_host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Host $http_host;
+    proxy_set_header   X-Forwarded-Proto https;
+  }
+}
+
+server {
+  listen          443 ssl;
+  server_name     alertmanager.{{ domain_name }};
+  access_log           /var/log/nginx/alertmanager.{{ domain_name }}_access_log;
+  error_log            /var/log/nginx/alertmanager.{{ domain_name }}_error_log;
+  ssl_certificate      /etc/letsencrypt/live/{{ domain_name }}/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/{{ domain_name }}/privkey.pem;
+  include              /etc/letsencrypt/options-ssl-nginx.conf;
+  location / {
+    proxy_pass         http://alertmanager;
+    proxy_set_header   Host $http_host;
+    proxy_set_header   X-Real-IP $remote_addr;
+    proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Host $http_host;
+    proxy_set_header   X-Forwarded-Proto https;
+  }
+}

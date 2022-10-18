@@ -1,0 +1,4 @@
+---
+letsencrypt_staging: false
+force_renewal: false
+break_my_certs: true

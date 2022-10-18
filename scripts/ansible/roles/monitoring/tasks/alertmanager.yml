@@ -1,0 +1,71 @@
+---
+
+- name: Create the alertmanager group
+  group:
+    name: "{{ prometheus_group }}"
+    state: present
+    system: true
+
+- name: Create User Alertmanager
+  user:
+    name: "{{ prometheus_user }}"
+    create_home: no
+    shell: /bin/false
+
+- name: Create Directories For Alertmanager
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_user }}"
+  loop:
+    - '/tmp/alertmanager'
+    - '{{ alertmanager_config_path }}'
+    - '{{ alertmanager_storage_path }}'
+
+- name: Download And Unzipped Alertmanager
+  unarchive:
+    src: https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz
+    dest: "{{ alertmanager_tmp_path }}"
+    creates: /tmp/alertmanager/alertmanager-{{ alertmanager_version }}.linux-amd64
+    remote_src: yes
+
+- name: Copy Bin Files From Unzipped to Alertmanager
+  copy:
+    src: "{{ alertmanager_tmp_path }}/alertmanager-{{ alertmanager_version }}.linux-amd64/{{ item }}"
+    dest: "{{ alertmanager_bin_path }}/"
+    remote_src: yes
+    mode: preserve
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_user }}"
+  loop: [ 'alertmanager', 'amtool' ]
+
+- name: Copy Conf File From Unzipped to Alertmanager
+  copy:
+    src: "{{ alertmanager_tmp_path }}/alertmanager-{{ alertmanager_version }}.linux-amd64/alertmanager.yml"
+    dest: "{{ alertmanager_config_path }}/{{ alertmanager_config_file }}"
+    remote_src: yes
+    mode: preserve
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_user }}"
+
+- name: copy config
+  template:
+    src=templates/alertmanager.yml.j2
+    dest={{ alertmanager_config_path }}/{{ alertmanager_config_file }}
+  notify:
+    - restart alertmanager
+
+- name: Create File for Alertmanager Systemd
+  template:
+    src=templates/alertmanager.service.j2
+    dest=/etc/systemd/system/alertmanager.service
+  notify:
+    - restart alertmanager
+
+
+- name: Systemctl Alertmanager Start
+  systemd:
+    name: alertmanager
+    state: started
+    enabled: yes

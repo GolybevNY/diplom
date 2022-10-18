@@ -1,0 +1,32 @@
+- name: install nginx configuration
+  template:
+    src: 'templates/wordpress.conf.j2'
+    dest: '/etc/nginx/sites-available/wordpress.conf'
+  notify:
+    - nginx systemd
+
+- name: activate site configuration
+  file:
+    src: '/etc/nginx/sites-available/wordpress.conf'
+    dest: '/etc/nginx/sites-enabled/wordpress.conf'
+    state: 'link'
+
+- name: download WordPress
+  get_url:
+    url: "{{ download_url }}"
+    dest: "/tmp/latest.tar.gz"
+
+- name: creating directory for WordPress
+  file:
+    path: "{{ wpdirectory }}"
+    state: "directory"
+    owner: "www-data"
+    group: "www-data"
+
+- name: unpack WordPress installation
+  shell: "tar xvfz /tmp/latest.tar.gz -C {{ wpdirectory }} && chown -R www-data:www-data {{ wpdirectory }}"
+
+- name: Set up wp-config
+  template:
+    src: 'templates/wp-config.php.j2'
+    dest: '{{ wpdirectory }}/wordpress/wp-config.php'

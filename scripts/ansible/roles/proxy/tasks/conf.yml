@@ -1,0 +1,16 @@
+- name: Add nginx.conf
+  template:
+    src: templates/nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+
+- name: Add default site
+  template:
+    src: templates/nginx_default.conf.j2
+    dest: /etc/nginx/sites-enabled/default
+
+- name: Add site conf
+  template:
+    src: templates/nginx_sites.conf.j2
+    dest: /etc/nginx/sites-enabled/{{ domain_name }}.conf
+  notify:
+    - nginx restart

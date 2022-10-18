@@ -1,0 +1,10 @@
+#cloud-config
+users:
+  - name: user
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCoughFH5dm8Vc2SoR3vqKIOmF26oVzkG0DFhyxF9pF4ZBnTLsjM9VfgzCfNu8iE6XUElce7jO4OE6TAJOOXn12qYwdl6dsEreBHHZTkih2d6sc8qghH8JE9y3Jc0XI0oEGG6bypTiDyzd73rUOlJLEOX1zmBJ/DIYQNNo9jGmSr19h1c2OI8I6t9kLoCeyx3r9OipATbIU/dhZ1X1NrJbw4xdqUsdf9K+0/654IdPIkfHeunedV+IEPMgp0vY3msZAy/mRGdWiF11/+7/V1zbvQd5i0PUNb/ze+18ln2I/wm5faQDvSD1l91Ow8jk1Xoym0ANeBodqMwiWbX/oBAf8x0u98eSsjfbSsK9XrzMUKQBcgwwBDiyFKTYOmgd6X8pnHyWeJe7GrTHhHEXGkS0c2CtwUDmXTDtMC0Lo944CYSMwKT9vFnhDi/mqjCDCTcJqJ1CTG0dzFohJpC9L9N44HCQ4tXBs8ejLp60SD+KfxvrMXUu4raG0jBxi70mJLas= gny@gny-HP-Notebook
+
+

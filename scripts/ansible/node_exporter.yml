@@ -1,0 +1,13 @@
+- hosts: app db01 db02 monitoring runner proxy
+  gather_facts: true
+  become:
+    true
+  become_method:
+    sudo
+  become_user:
+    root
+  remote_user:
+    user
+  roles:
+   - node_exporter
+

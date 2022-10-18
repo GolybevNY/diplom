@@ -1,0 +1,21 @@
+- name: Install Nginx
+  apt:
+    name: nginx
+    state: latest
+    update_cache: yes
+  notify:
+    - nginx systemd
+
+- name: Disable default site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Remove default site
+  file:
+    path: /etc/nginx/sites-available/default
+    state: absent
+  notify:
+      - nginx restart
+
+- import_tasks: php.yml

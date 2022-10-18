@@ -1,0 +1,42 @@
+[proxy]
+golubevny.site letsencrypt_email=vvertoff85@gmail.com domain_name=golubevny.site 
+[proxy:vars]
+ansible_host=$internal_ip_address_proxy_wan_yandex_cloud
+ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+[db01]
+db01.golubevny.site mysql_server_id=1 mysql_replication_role=master
+[db01:vars]
+ansible_host=$internal_ip_address_db01_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'
+
+[db02]
+db02.golubevny.site mysql_server_id=2 mysql_replication_role=slave
+[db02:vars]
+ansible_host=$internal_ip_address_db02_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'
+
+[app]
+app.golubevny.site 
+[app:vars]
+ansible_host=$internal_ip_address_app_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'
+#ssh 51.250.15.168 -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W app.ovirt:22 -q user@golubevny.site -o StrictHostKeyChecking=no "
+
+[gitlab]
+gitlab.golubevny.site domain_name=golubevny.site 
+[gitlab:vars]
+ansible_host=$internal_ip_address_gitlab_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'
+
+[runner]
+runner.golubevny.site domain_name=golubevny.site 
+[runner:vars]
+ansible_host=$internal_ip_address_runner_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'
+
+[monitoring]
+monitoring.golubevny.site domain_name=golubevny.site 
+[monitoring:vars]
+ansible_host=$internal_ip_address_monitoring_yandex_cloud
+ansible_ssh_common_args='-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W %h:%p -q user@golubevny.site -o StrictHostKeyChecking=no "'

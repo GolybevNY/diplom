@@ -1,0 +1,26 @@
+server {
+  listen 80;
+  listen [::]:80;
+  server_name _;
+  root {{ wpdirectory }}/wordpress;
+  index index.php index.html index.htm;
+
+  server_name {{ domain }};
+
+  location / {
+    try_files $uri $uri/ /index.php;
+  }
+
+  error_log debug;
+
+  # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+  location ~ \.php$ {
+    try_files $uri =404;
+
+    include       fastcgi_params;
+    fastcgi_index index.php;
+    fastcgi_pass  unix:/var/run/php-fpm.sock;
+    fastcgi_param SCRIPT_FILENAME
+                  $document_root$fastcgi_script_name;
+  }
+}

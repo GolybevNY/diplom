@@ -1,0 +1,16 @@
+---
+- name: nginx systemd
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: nginx restart
+  service:
+    name: nginx
+    state: restarted
+
+- name: restart php-fpm
+  service:
+    name: php8.1-fpm
+    state: restarted

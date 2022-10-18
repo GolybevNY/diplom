@@ -1,0 +1,7 @@
+domain: "ovirt.ru"
+download_url: "http://wordpress.org/latest.tar.gz"
+wpdirectory: "/var/www"
+db_name: "wordpress"
+db_user: "wordpress"
+db_password: "wordpress"
+db_host: "db01.ovirt.ru"
