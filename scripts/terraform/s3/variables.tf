@@ -11,3 +11,15 @@ variable "yandex_folder_id" {
 variable "service_account_id" {
   default = "ajedhafuajleavpctkmf"
 }
+
+# Accsess key
+variable "yandex_access_key" {
+  type = string
+  description = "This is an env variable TF_VAR_yandex_access_key  from secrets_export.sh"
+}
+
+# Secret key
+variable "yandex_secret_key" {
+  type = string
+  description = "This is an env variable TF_VAR_yandex_secret_key  from secrets_export.sh"
+}

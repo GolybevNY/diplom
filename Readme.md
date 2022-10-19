@@ -48,7 +48,7 @@ devops-diplom-yandexcloud
 
 ---
 
-Есть зарегистрированное имя `ovirt.ru` у регистратора `webnames.ru`.
+Есть зарегистрированное имя `golubevny.site` у регистратора `reg.ru`.
 
 ![1](img/img001.PNG)
 
@@ -371,7 +371,7 @@ secret_key = <sensitive>
 
 ![11](img/img011.PNG)
 
-Из файла `terraform.tfstate` берем значения `access_key` и `secret_key` и заносим их в файл `main.tf` каталога `stage`.
+Запускаем скрипт `secrets_export.sh` для экспорта в переменные окружения `access_key` и `secret_key`. Или из файла `terraform.tfstate` берем значения `access_key` и `secret_key` и заносим их в файл `main.tf` каталога `stage`.
 
 Далее из каталога `stage`
 

@@ -31,3 +31,15 @@ variable "ubuntu-proxy" {
 variable "lan_proxy_ip" {
   default = "192.168.101.100"
 }
+
+# Accsess key
+variable "yandex_access_key" {
+  type = string
+  description = "This is an env variable TF_VAR_yandex_access_key from secrets_export.sh"
+}
+
+# Secret key
+variable "yandex_secret_key" {
+  type = string
+  description = "This is an env variable TF_VAR_yandex_secret_key from secrets_export.sh"
+}

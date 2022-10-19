@@ -4,7 +4,7 @@ provider "yandex" {
   zone                      = "ru-central1-a"
 }
 
-data "yandex_iam_service_account" "my-netology" {
+data "yandex_iam_service_account" "robot" {
   service_account_id = "${var.service_account_id}"
 }
 
@@ -21,8 +21,8 @@ terraform {
     bucket     = "s3-diplom"
     region     = "ru-central1-a"
     key        = "terraform/state.tfstate"
-    access_key = "YCA"
-    secret_key = "YCMzU"
+    access_key = ""
+    secret_key = ""
 
     skip_region_validation      = true
     skip_credentials_validation = true
