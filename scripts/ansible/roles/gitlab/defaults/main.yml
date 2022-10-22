@@ -23,7 +23,7 @@ gitlab_default_theme: '2'
 gitlab_create_self_signed_cert: false
 
 gitlab_initial_root_password: "P@ssw0rd"
-gitlab_runners_registration_token: "GR1348941mRspncv4vqG9yCwuCTHv"
+gitlab_runners_registration_token: "GR1348941JeD9kk6C7vZ1zr1C2xzH"
 
 # SSL Configuration.
 gitlab_redirect_http_to_https: false

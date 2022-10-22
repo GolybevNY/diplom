@@ -22,7 +22,7 @@ gitlab_runner_concurrent: '{{ ansible_processor_vcpus }}'
 # GitLab coordinator URL
 gitlab_runner_coordinator_url: 'http://gitlab.{{ domain_name }}'
 # GitLab registration token
-gitlab_runner_registration_token: 'GR1348941mRspncv4vqG9yCwuCTHv'
+gitlab_runner_registration_token: 'GR13489418koLD2jpQi6XR9VHdMJB'
 
 gitlab_runner_sentry_dsn: ''
 

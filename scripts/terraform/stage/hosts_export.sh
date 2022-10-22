@@ -7,3 +7,4 @@ export internal_ip_address_monitoring_yandex_cloud=$(terraform output -json inte
 export internal_ip_address_proxy_wan_yandex_cloud=$(terraform output -json internal_ip_address_proxy_wan_yandex_cloud)
 export internal_ip_address_runner_yandex_cloud=$(terraform output -json internal_ip_address_runner_yandex_cloud)
 envsubst < hosts.j2 > ../../ansible/hosts
+echo "Export compleate!"

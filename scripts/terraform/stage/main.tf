@@ -21,8 +21,8 @@ terraform {
     bucket     = "s3-diplom"
     region     = "ru-central1-a"
     key        = "terraform/state.tfstate"
-    access_key = ""
-    secret_key = ""
+    access_key = "YCAJEU_C1cAeOoip58-Zcq9Jv"
+    secret_key = "YCOdD6ThclKJAaSSM79Fxms7x2yiPX51vFTRwmkI"
 
     skip_region_validation      = true
     skip_credentials_validation = true

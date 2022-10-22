@@ -1,4 +1,4 @@
-devops-diplom-yandexcloud
+diplom-my
 # Дипломный практикум в YandexCloud
   * [Цели:](#цели)
   * [Этапы выполнения:](#этапы-выполнения)
@@ -50,20 +50,20 @@ devops-diplom-yandexcloud
 
 Есть зарегистрированное имя `golubevny.site` у регистратора `reg.ru`.
 
-![1](img/img001.PNG)
+![1](pic/Reg.ru.png)
 
-Делегировал его `DNS` на `ns1.yandexcloud.net` и `ns2.yandexcloud.net`, т.к. буду использовать `DNS` от `YC`.
+Делегировал его `DNS` на `ns1.yandexcloud.net` и `ns2.yandexcloud.net`, т.к. буду использовать `DNS` от `YC`. Для этого создадим файл `dns.tf` и укажем в нем:
 
 ```hcl
 resource "yandex_dns_zone" "diplom" {
-  name        = "my-diplom-netology-zone"
+  name        = "dns-diplom"
   description = "Diplom Netology public zone"
 
   labels = {
     label1 = "diplom-public"
   }
 
-  zone    = "ovirt.ru."
+  zone    = "golubevny.site."
   public  = true
 
   depends_on = [
@@ -73,7 +73,7 @@ resource "yandex_dns_zone" "diplom" {
 
 resource "yandex_dns_recordset" "def" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "@.ovirt.ru."
+  name    = "@.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -81,7 +81,7 @@ resource "yandex_dns_recordset" "def" {
 
 resource "yandex_dns_recordset" "gitlab" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "gitlab.ovirt.ru."
+  name    = "gitlab.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -89,7 +89,7 @@ resource "yandex_dns_recordset" "gitlab" {
 
 resource "yandex_dns_recordset" "alertmanager" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "alertmanager.ovirt.ru."
+  name    = "alertmanager.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -97,7 +97,7 @@ resource "yandex_dns_recordset" "alertmanager" {
 
 resource "yandex_dns_recordset" "grafana" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "grafana.ovirt.ru."
+  name    = "grafana.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -105,7 +105,7 @@ resource "yandex_dns_recordset" "grafana" {
 
 resource "yandex_dns_recordset" "prometheus" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "prometheus.ovirt.ru."
+  name    = "prometheus.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -113,7 +113,7 @@ resource "yandex_dns_recordset" "prometheus" {
 
 resource "yandex_dns_recordset" "www" {
   zone_id = yandex_dns_zone.diplom.id
-  name    = "www.ovirt.ru."
+  name    = "www.golubevny.site."
   type    = "A"
   ttl     = 200
   data    = [yandex_vpc_address.addr.external_ipv4_address[0].address]
@@ -122,7 +122,7 @@ resource "yandex_dns_recordset" "www" {
 
 
 
-Так же буду арендовать статический ip у YC автоматически.
+Для аренды статического ip-адреса в YC добавим в файл `network.tf`:
 
 ```hcl
 resource "yandex_vpc_address" "addr" {
@@ -171,12 +171,11 @@ resource "yandex_vpc_address" "addr" {
 
 ---
 
-Использовал сервисны аккаунт из лабораторных работ - `my-netology`.
+Использован сервисный аккаунт - `robot`.
+Бекенд подготавливается отдельным конфигом терраформа [s3](scripts/terraform/s3/), 
+а затем он исподьзуется в качестве хранилища `backend` для `workspace` ["stage"](scripts/terraform/stage).
 
-Бекенд подготавливаю отдельным конфигом терраформа [s3](scripts/terraform/s3/), 
-а затем уже использую его в основном [stage](scripts/terraform/stage), т.к. не вышло его сразу и создать и использовать в одном конфиге.
-
-Использую один воркспейс `stage`.
+Используется один воркспейс `"stage"`.
 
 `VPC` в разных зонах доступности, настроена маршрутизация:
 
@@ -211,9 +210,8 @@ resource "yandex_vpc_subnet" "net-102" {
 }
 ```
 
-Конфигурации terraform [тут](scripts/terraform/), в процессе могут измениться.
 
-Сначала из каталога `s3`, для создания бакета в `YC`
+Из каталога `s3`, для создания бакета в `YC` выполняем:
 
 ```bash
 export YC_TOKEN=$(yc config get token)
@@ -222,158 +220,10 @@ terraform plan
 terraform apply --auto-approve
 ```
 
-<details>
-<summary>Вывод terraform</summary>
 
-```bash
+Из файла `terraform.tfstate` берем значения `access_key` и `secret_key` и заносим их в файл `stage\main.tf`.
 
-user@user-ubuntu:~/devops/diplom/s3$ terraform init&& terraform plan&& terraform apply -auto-approve
-
-Initializing the backend...
-
-Initializing provider plugins...
-- Reusing previous version of yandex-cloud/yandex from the dependency lock file
-- Using previously-installed yandex-cloud/yandex v0.78.1
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-data.yandex_iam_service_account.my-netology: Reading...
-data.yandex_iam_service_account.my-netology: Read complete after 0s [id=ajesg66dg5r1ahte7mqd]
-
-Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
-
-Terraform will perform the following actions:
-
-  # yandex_iam_service_account_static_access_key.sa-static-key will be created
-  + resource "yandex_iam_service_account_static_access_key" "sa-static-key" {
-      + access_key           = (known after apply)
-      + created_at           = (known after apply)
-      + description          = "static access key for object storage"
-      + encrypted_secret_key = (known after apply)
-      + id                   = (known after apply)
-      + key_fingerprint      = (known after apply)
-      + secret_key           = (sensitive value)
-      + service_account_id   = "ajesg66dg5r1ahte7mqd"
-    }
-
-  # yandex_storage_bucket.state will be created
-  + resource "yandex_storage_bucket" "state" {
-      + access_key            = (known after apply)
-      + acl                   = "private"
-      + bucket                = "my-netology-bucket"
-      + bucket_domain_name    = (known after apply)
-      + default_storage_class = (known after apply)
-      + folder_id             = (known after apply)
-      + force_destroy         = true
-      + id                    = (known after apply)
-      + secret_key            = (sensitive value)
-      + website_domain        = (known after apply)
-      + website_endpoint      = (known after apply)
-
-      + anonymous_access_flags {
-          + list = (known after apply)
-          + read = (known after apply)
-        }
-
-      + versioning {
-          + enabled = (known after apply)
-        }
-    }
-
-Plan: 2 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + access_key = (sensitive value)
-  + secret_key = (sensitive value)
-
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run "terraform apply" now.
-data.yandex_iam_service_account.my-netology: Reading...
-data.yandex_iam_service_account.my-netology: Read complete after 0s [id=ajesg66dg5r1ahte7mqd]
-
-Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
-
-Terraform will perform the following actions:
-
-  # yandex_iam_service_account_static_access_key.sa-static-key will be created
-  + resource "yandex_iam_service_account_static_access_key" "sa-static-key" {
-      + access_key           = (known after apply)
-      + created_at           = (known after apply)
-      + description          = "static access key for object storage"
-      + encrypted_secret_key = (known after apply)
-      + id                   = (known after apply)
-      + key_fingerprint      = (known after apply)
-      + secret_key           = (sensitive value)
-      + service_account_id   = "ajesg66dg5r1ahte7mqd"
-    }
-
-  # yandex_storage_bucket.state will be created
-  + resource "yandex_storage_bucket" "state" {
-      + access_key            = (known after apply)
-      + acl                   = "private"
-      + bucket                = "my-netology-bucket"
-      + bucket_domain_name    = (known after apply)
-      + default_storage_class = (known after apply)
-      + folder_id             = (known after apply)
-      + force_destroy         = true
-      + id                    = (known after apply)
-      + secret_key            = (sensitive value)
-      + website_domain        = (known after apply)
-      + website_endpoint      = (known after apply)
-
-      + anonymous_access_flags {
-          + list = (known after apply)
-          + read = (known after apply)
-        }
-
-      + versioning {
-          + enabled = (known after apply)
-        }
-    }
-
-Plan: 2 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + access_key = (sensitive value)
-  + secret_key = (sensitive value)
-yandex_iam_service_account_static_access_key.sa-static-key: Creating...
-yandex_iam_service_account_static_access_key.sa-static-key: Creation complete after 0s [id=ajevatl8bfcpe66f6s6f]
-yandex_storage_bucket.state: Creating...
-yandex_storage_bucket.state: Still creating... [10s elapsed]
-yandex_storage_bucket.state: Still creating... [20s elapsed]
-yandex_storage_bucket.state: Still creating... [30s elapsed]
-yandex_storage_bucket.state: Still creating... [40s elapsed]
-yandex_storage_bucket.state: Still creating... [50s elapsed]
-yandex_storage_bucket.state: Still creating... [1m0s elapsed]
-yandex_storage_bucket.state: Creation complete after 1m1s [id=my-netology-bucket]
-
-Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-access_key = <sensitive>
-secret_key = <sensitive>
-
-
-```
-
-</details>
-
-![11](img/img011.PNG)
-
-Запускаем скрипт `secrets_export.sh` для экспорта в переменные окружения `access_key` и `secret_key`. Или из файла `terraform.tfstate` берем значения `access_key` и `secret_key` и заносим их в файл `main.tf` каталога `stage`.
-
-Далее из каталога `stage`
+Далее переходим в каталог `stage` и выполняем:
 
 ```bash
 export YC_TOKEN=$(yc config get token)
@@ -382,1536 +232,12 @@ terraform workspace new stage
 terraform init
 terraform plan
 terraform apply --auto-approve
-terraform output -json > output.json
 ```
 
-<details>
-<summary>Вывод terraform</summary>
 
-```bash
+В результате создаются 7 виртуальных машин (5 - `Ubuntu 22.04`, 1 - `Ubuntu 20.04`, proxy - `ubuntu 18.04 NAT Instance`).
 
-user@user-ubuntu:~/devops/diplom/stage$ terraform init -reconfigure&& terraform workspace new stage&& terraform init -reconfigure&& terraform plan&& terraform apply --auto-approve&& terraform output -json > output.json
-
-Initializing the backend...
-
-Successfully configured the backend "s3"! Terraform will automatically
-use this backend unless the backend configuration changes.
-
-Initializing provider plugins...
-- Reusing previous version of yandex-cloud/yandex from the dependency lock file
-- Using previously-installed yandex-cloud/yandex v0.78.1
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-Created and switched to workspace "stage"!
-
-You're now on a new, empty workspace. Workspaces isolate their state,
-so if you run "terraform plan" Terraform will not see any existing state
-for this configuration.
-
-Initializing the backend...
-
-Successfully configured the backend "s3"! Terraform will automatically
-use this backend unless the backend configuration changes.
-
-Initializing provider plugins...
-- Reusing previous version of yandex-cloud/yandex from the dependency lock file
-- Using previously-installed yandex-cloud/yandex v0.78.1
-
-Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
-data.yandex_iam_service_account.my-netology: Reading...
-data.yandex_iam_service_account.my-netology: Read complete after 0s [id=ajesg66dg5r1ahte7mqd]
-
-Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
-
-Terraform will perform the following actions:
-
-  # yandex_compute_instance.app will be created
-  + resource "yandex_compute_instance" "app" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "app.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "app"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.db01 will be created
-  + resource "yandex_compute_instance" "db01" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "db01.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "db01"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.db02 will be created
-  + resource "yandex_compute_instance" "db02" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "db02.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "db02"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.gitlab will be created
-  + resource "yandex_compute_instance" "gitlab" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "gitlab.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "gitlab"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8kdq6d0p8sij7h5qe3"
-              + name        = (known after apply)
-              + size        = 40
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.monitoring will be created
-  + resource "yandex_compute_instance" "monitoring" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "monitoring.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "monitoring"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.proxy will be created
-  + resource "yandex_compute_instance" "proxy" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "proxy"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-a"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd83slullt763d3lo57m"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = "192.168.101.100"
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = true
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 2
-          + memory        = 2
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.runner will be created
-  + resource "yandex_compute_instance" "runner" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "runner.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "runner"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_dns_recordset.alertmanager will be created
-  + resource "yandex_dns_recordset" "alertmanager" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "alertmanager.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.def will be created
-  + resource "yandex_dns_recordset" "def" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "@.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.gitlab will be created
-  + resource "yandex_dns_recordset" "gitlab" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "gitlab.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.grafana will be created
-  + resource "yandex_dns_recordset" "grafana" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "grafana.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.prometheus will be created
-  + resource "yandex_dns_recordset" "prometheus" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "prometheus.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.www will be created
-  + resource "yandex_dns_recordset" "www" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "www.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_zone.diplom will be created
-  + resource "yandex_dns_zone" "diplom" {
-      + created_at       = (known after apply)
-      + description      = "Diplom Netology public zone"
-      + folder_id        = (known after apply)
-      + id               = (known after apply)
-      + labels           = {
-          + "label1" = "diplom-public"
-        }
-      + name             = "my-diplom-netology-zone"
-      + private_networks = (known after apply)
-      + public           = true
-      + zone             = "ovirt.ru."
-    }
-
-  # yandex_vpc_address.addr will be created
-  + resource "yandex_vpc_address" "addr" {
-      + created_at = (known after apply)
-      + folder_id  = (known after apply)
-      + id         = (known after apply)
-      + labels     = (known after apply)
-      + name       = "ip-stage"
-      + reserved   = (known after apply)
-      + used       = (known after apply)
-
-      + external_ipv4_address {
-          + address                  = (known after apply)
-          + ddos_protection_provider = (known after apply)
-          + outgoing_smtp_capability = (known after apply)
-          + zone_id                  = "ru-central1-a"
-        }
-    }
-
-  # yandex_vpc_network.default will be created
-  + resource "yandex_vpc_network" "default" {
-      + created_at                = (known after apply)
-      + default_security_group_id = (known after apply)
-      + folder_id                 = (known after apply)
-      + id                        = (known after apply)
-      + labels                    = (known after apply)
-      + name                      = "net-stage"
-      + subnet_ids                = (known after apply)
-    }
-
-  # yandex_vpc_route_table.route-table will be created
-  + resource "yandex_vpc_route_table" "route-table" {
-      + created_at = (known after apply)
-      + folder_id  = (known after apply)
-      + id         = (known after apply)
-      + labels     = (known after apply)
-      + name       = "nat-instance-route"
-      + network_id = (known after apply)
-
-      + static_route {
-          + destination_prefix = "0.0.0.0/0"
-          + next_hop_address   = "192.168.101.100"
-        }
-    }
-
-  # yandex_vpc_subnet.net-101 will be created
-  + resource "yandex_vpc_subnet" "net-101" {
-      + created_at     = (known after apply)
-      + folder_id      = (known after apply)
-      + id             = (known after apply)
-      + labels         = (known after apply)
-      + name           = "subnet-stage-101"
-      + network_id     = (known after apply)
-      + route_table_id = (known after apply)
-      + v4_cidr_blocks = [
-          + "192.168.101.0/24",
-        ]
-      + v6_cidr_blocks = (known after apply)
-      + zone           = "ru-central1-a"
-    }
-
-  # yandex_vpc_subnet.net-102 will be created
-  + resource "yandex_vpc_subnet" "net-102" {
-      + created_at     = (known after apply)
-      + folder_id      = (known after apply)
-      + id             = (known after apply)
-      + labels         = (known after apply)
-      + name           = "subnet-stage-102"
-      + network_id     = (known after apply)
-      + route_table_id = (known after apply)
-      + v4_cidr_blocks = [
-          + "192.168.102.0/24",
-        ]
-      + v6_cidr_blocks = (known after apply)
-      + zone           = "ru-central1-b"
-    }
-
-Plan: 19 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + internal_ip_address_app_yandex_cloud        = (known after apply)
-  + internal_ip_address_db01_yandex_cloud       = (known after apply)
-  + internal_ip_address_db02_yandex_cloud       = (known after apply)
-  + internal_ip_address_gitlab_yandex_cloud     = (known after apply)
-  + internal_ip_address_monitoring_yandex_cloud = (known after apply)
-  + internal_ip_address_proxy_lan_yandex_cloud  = "192.168.101.100"
-  + internal_ip_address_proxy_wan_yandex_cloud  = (known after apply)
-  + internal_ip_address_runner_yandex_cloud     = (known after apply)
-  + workspace                                   = "stage"
-
-────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-Note: You didn't use the -out option to save this plan, so Terraform can't guarantee to take exactly these actions if you run "terraform apply" now.
-data.yandex_iam_service_account.my-netology: Reading...
-data.yandex_iam_service_account.my-netology: Read complete after 0s [id=ajesg66dg5r1ahte7mqd]
-
-Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
-  + create
-
-Terraform will perform the following actions:
-
-  # yandex_compute_instance.app will be created
-  + resource "yandex_compute_instance" "app" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "app.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "app"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.db01 will be created
-  + resource "yandex_compute_instance" "db01" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "db01.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "db01"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.db02 will be created
-  + resource "yandex_compute_instance" "db02" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "db02.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "db02"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.gitlab will be created
-  + resource "yandex_compute_instance" "gitlab" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "gitlab.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "gitlab"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8kdq6d0p8sij7h5qe3"
-              + name        = (known after apply)
-              + size        = 40
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.monitoring will be created
-  + resource "yandex_compute_instance" "monitoring" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "monitoring.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "monitoring"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.proxy will be created
-  + resource "yandex_compute_instance" "proxy" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "proxy"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-a"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd83slullt763d3lo57m"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = "192.168.101.100"
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = true
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 2
-          + memory        = 2
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_compute_instance.runner will be created
-  + resource "yandex_compute_instance" "runner" {
-      + allow_stopping_for_update = true
-      + created_at                = (known after apply)
-      + folder_id                 = (known after apply)
-      + fqdn                      = (known after apply)
-      + hostname                  = "runner.ovirt.ru"
-      + id                        = (known after apply)
-      + metadata                  = {
-          + "user-data" = <<-EOT
-                #cloud-config
-                users:
-                  - name: user
-                    groups: sudo
-                    shell: /bin/bash
-                    sudo: ['ALL=(ALL) NOPASSWD:ALL']
-                    ssh_authorized_keys:
-                      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCeOYFLwcOqvWVg6bamtPX/lxjq6wxnI7HBGOkqhusbpZajDbF7OZ0mSAzw4J4xV3rMMW1eimmi/vLTvYh2N91vUegbfleWuh9XfS0Ouv1XYiDiEw1X5wPfj8VwWIIIqSRfCxiO4C7njT+yRfpgJDXLHJ2Oy40c1kmvOPq6fA4zIBpqADAjCcLUS7qv1HIR3+K/v+fiUFUEKSFSKYY7ANsM0ujwjpnPnFpDlDxMkuX/8988zPlwIx2woEJTn8ea9UT0cdkdnIGGO7OVvPW16FoEMbs3ccp9l6Nv8DMFbWhd7Mp4Dkekpj+aLeDvCnQCUtcFZIn6AQ74m5ZwKNISoHZyqWehs7RIOPOEEbmpANEk1l7HZKvV7KvZPh1ucc2wj+prUD1ZRP7meRkwjn6orY80UVm7RP4ENsJYNePgZLmK247JbxVXnT93NpU597F78tOEdqpQPshc0jLDPpQRRfLfT6g3WMxL6yXl3CDiC9yr0FbSOzpcyaH7UsAqLsuozx0= user@user-ubuntu
-                
-            EOT
-        }
-      + name                      = "runner"
-      + network_acceleration_type = "standard"
-      + platform_id               = "standard-v1"
-      + service_account_id        = (known after apply)
-      + status                    = (known after apply)
-      + zone                      = "ru-central1-b"
-
-      + boot_disk {
-          + auto_delete = true
-          + device_name = (known after apply)
-          + disk_id     = (known after apply)
-          + mode        = (known after apply)
-
-          + initialize_params {
-              + block_size  = (known after apply)
-              + description = (known after apply)
-              + image_id    = "fd8uoiksr520scs811jl"
-              + name        = (known after apply)
-              + size        = 10
-              + snapshot_id = (known after apply)
-              + type        = "network-nvme"
-            }
-        }
-
-      + network_interface {
-          + index              = (known after apply)
-          + ip_address         = (known after apply)
-          + ipv4               = true
-          + ipv6               = (known after apply)
-          + ipv6_address       = (known after apply)
-          + mac_address        = (known after apply)
-          + nat                = false
-          + nat_ip_address     = (known after apply)
-          + nat_ip_version     = (known after apply)
-          + security_group_ids = (known after apply)
-          + subnet_id          = (known after apply)
-        }
-
-      + placement_policy {
-          + host_affinity_rules = (known after apply)
-          + placement_group_id  = (known after apply)
-        }
-
-      + resources {
-          + core_fraction = 100
-          + cores         = 4
-          + memory        = 4
-        }
-
-      + scheduling_policy {
-          + preemptible = (known after apply)
-        }
-    }
-
-  # yandex_dns_recordset.alertmanager will be created
-  + resource "yandex_dns_recordset" "alertmanager" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "alertmanager.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.def will be created
-  + resource "yandex_dns_recordset" "def" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "@.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.gitlab will be created
-  + resource "yandex_dns_recordset" "gitlab" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "gitlab.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.grafana will be created
-  + resource "yandex_dns_recordset" "grafana" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "grafana.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.prometheus will be created
-  + resource "yandex_dns_recordset" "prometheus" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "prometheus.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_recordset.www will be created
-  + resource "yandex_dns_recordset" "www" {
-      + data    = (known after apply)
-      + id      = (known after apply)
-      + name    = "www.ovirt.ru."
-      + ttl     = 200
-      + type    = "A"
-      + zone_id = (known after apply)
-    }
-
-  # yandex_dns_zone.diplom will be created
-  + resource "yandex_dns_zone" "diplom" {
-      + created_at       = (known after apply)
-      + description      = "Diplom Netology public zone"
-      + folder_id        = (known after apply)
-      + id               = (known after apply)
-      + labels           = {
-          + "label1" = "diplom-public"
-        }
-      + name             = "my-diplom-netology-zone"
-      + private_networks = (known after apply)
-      + public           = true
-      + zone             = "ovirt.ru."
-    }
-
-  # yandex_vpc_address.addr will be created
-  + resource "yandex_vpc_address" "addr" {
-      + created_at = (known after apply)
-      + folder_id  = (known after apply)
-      + id         = (known after apply)
-      + labels     = (known after apply)
-      + name       = "ip-stage"
-      + reserved   = (known after apply)
-      + used       = (known after apply)
-
-      + external_ipv4_address {
-          + address                  = (known after apply)
-          + ddos_protection_provider = (known after apply)
-          + outgoing_smtp_capability = (known after apply)
-          + zone_id                  = "ru-central1-a"
-        }
-    }
-
-  # yandex_vpc_network.default will be created
-  + resource "yandex_vpc_network" "default" {
-      + created_at                = (known after apply)
-      + default_security_group_id = (known after apply)
-      + folder_id                 = (known after apply)
-      + id                        = (known after apply)
-      + labels                    = (known after apply)
-      + name                      = "net-stage"
-      + subnet_ids                = (known after apply)
-    }
-
-  # yandex_vpc_route_table.route-table will be created
-  + resource "yandex_vpc_route_table" "route-table" {
-      + created_at = (known after apply)
-      + folder_id  = (known after apply)
-      + id         = (known after apply)
-      + labels     = (known after apply)
-      + name       = "nat-instance-route"
-      + network_id = (known after apply)
-
-      + static_route {
-          + destination_prefix = "0.0.0.0/0"
-          + next_hop_address   = "192.168.101.100"
-        }
-    }
-
-  # yandex_vpc_subnet.net-101 will be created
-  + resource "yandex_vpc_subnet" "net-101" {
-      + created_at     = (known after apply)
-      + folder_id      = (known after apply)
-      + id             = (known after apply)
-      + labels         = (known after apply)
-      + name           = "subnet-stage-101"
-      + network_id     = (known after apply)
-      + route_table_id = (known after apply)
-      + v4_cidr_blocks = [
-          + "192.168.101.0/24",
-        ]
-      + v6_cidr_blocks = (known after apply)
-      + zone           = "ru-central1-a"
-    }
-
-  # yandex_vpc_subnet.net-102 will be created
-  + resource "yandex_vpc_subnet" "net-102" {
-      + created_at     = (known after apply)
-      + folder_id      = (known after apply)
-      + id             = (known after apply)
-      + labels         = (known after apply)
-      + name           = "subnet-stage-102"
-      + network_id     = (known after apply)
-      + route_table_id = (known after apply)
-      + v4_cidr_blocks = [
-          + "192.168.102.0/24",
-        ]
-      + v6_cidr_blocks = (known after apply)
-      + zone           = "ru-central1-b"
-    }
-
-Plan: 19 to add, 0 to change, 0 to destroy.
-
-Changes to Outputs:
-  + internal_ip_address_app_yandex_cloud        = (known after apply)
-  + internal_ip_address_db01_yandex_cloud       = (known after apply)
-  + internal_ip_address_db02_yandex_cloud       = (known after apply)
-  + internal_ip_address_gitlab_yandex_cloud     = (known after apply)
-  + internal_ip_address_monitoring_yandex_cloud = (known after apply)
-  + internal_ip_address_proxy_lan_yandex_cloud  = "192.168.101.100"
-  + internal_ip_address_proxy_wan_yandex_cloud  = (known after apply)
-  + internal_ip_address_runner_yandex_cloud     = (known after apply)
-  + workspace                                   = "stage"
-yandex_vpc_network.default: Creating...
-yandex_vpc_address.addr: Creating...
-yandex_vpc_network.default: Creation complete after 2s [id=enpmc8fl0pnpqr81iv0l]
-yandex_vpc_route_table.route-table: Creating...
-yandex_vpc_address.addr: Creation complete after 2s [id=e9bi2bvda2n2sshdia03]
-yandex_vpc_route_table.route-table: Creation complete after 1s [id=enpaodgt0egahkls4jrh]
-yandex_vpc_subnet.net-101: Creating...
-yandex_vpc_subnet.net-102: Creating...
-yandex_vpc_subnet.net-101: Creation complete after 0s [id=e9bu3c9uuiklj4lkk181]
-yandex_compute_instance.proxy: Creating...
-yandex_vpc_subnet.net-102: Creation complete after 1s [id=e2lpd8q6sffi6jk8827q]
-yandex_dns_zone.diplom: Creating...
-yandex_compute_instance.gitlab: Creating...
-yandex_compute_instance.db01: Creating...
-yandex_compute_instance.db02: Creating...
-yandex_compute_instance.runner: Creating...
-yandex_compute_instance.app: Creating...
-yandex_compute_instance.monitoring: Creating...
-yandex_dns_zone.diplom: Creation complete after 1s [id=dnsa3r3poasr3qvf5u22]
-yandex_dns_recordset.alertmanager: Creating...
-yandex_dns_recordset.www: Creating...
-yandex_dns_recordset.def: Creating...
-yandex_dns_recordset.alertmanager: Creation complete after 1s [id=dnsa3r3poasr3qvf5u22/alertmanager.ovirt.ru./A]
-yandex_dns_recordset.grafana: Creating...
-yandex_dns_recordset.def: Creation complete after 1s [id=dnsa3r3poasr3qvf5u22/@.ovirt.ru./A]
-yandex_dns_recordset.prometheus: Creating...
-yandex_dns_recordset.grafana: Creation complete after 0s [id=dnsa3r3poasr3qvf5u22/grafana.ovirt.ru./A]
-yandex_dns_recordset.gitlab: Creating...
-yandex_dns_recordset.prometheus: Creation complete after 0s [id=dnsa3r3poasr3qvf5u22/prometheus.ovirt.ru./A]
-yandex_dns_recordset.www: Creation complete after 2s [id=dnsa3r3poasr3qvf5u22/www.ovirt.ru./A]
-yandex_dns_recordset.gitlab: Creation complete after 1s [id=dnsa3r3poasr3qvf5u22/gitlab.ovirt.ru./A]
-yandex_compute_instance.proxy: Still creating... [10s elapsed]
-yandex_compute_instance.gitlab: Still creating... [10s elapsed]
-yandex_compute_instance.runner: Still creating... [10s elapsed]
-yandex_compute_instance.db02: Still creating... [10s elapsed]
-yandex_compute_instance.db01: Still creating... [10s elapsed]
-yandex_compute_instance.app: Still creating... [10s elapsed]
-yandex_compute_instance.monitoring: Still creating... [10s elapsed]
-yandex_compute_instance.proxy: Still creating... [20s elapsed]
-yandex_compute_instance.gitlab: Still creating... [20s elapsed]
-yandex_compute_instance.db02: Still creating... [20s elapsed]
-yandex_compute_instance.runner: Still creating... [20s elapsed]
-yandex_compute_instance.db01: Still creating... [20s elapsed]
-yandex_compute_instance.app: Still creating... [20s elapsed]
-yandex_compute_instance.monitoring: Still creating... [20s elapsed]
-yandex_compute_instance.db01: Creation complete after 25s [id=epd8tdab3jkoirf6j9mu]
-yandex_compute_instance.app: Creation complete after 29s [id=epdtb69rrks8098msq5v]
-yandex_compute_instance.proxy: Still creating... [30s elapsed]
-yandex_compute_instance.gitlab: Still creating... [30s elapsed]
-yandex_compute_instance.runner: Still creating... [30s elapsed]
-yandex_compute_instance.db02: Still creating... [30s elapsed]
-yandex_compute_instance.monitoring: Still creating... [30s elapsed]
-yandex_compute_instance.db02: Creation complete after 30s [id=epdsn4dfp5t3v1cdvrvq]
-yandex_compute_instance.gitlab: Creation complete after 32s [id=epdcdnr3qsucsm5j8hfk]
-yandex_compute_instance.monitoring: Creation complete after 32s [id=epddfkiltbe9c3ivhk7q]
-yandex_compute_instance.runner: Creation complete after 32s [id=epdbhs7ktfecphcvvndn]
-yandex_compute_instance.proxy: Creation complete after 33s [id=fhme2i3cssi1hsfb12gi]
-
-Apply complete! Resources: 19 added, 0 changed, 0 destroyed.
-
-Outputs:
-
-internal_ip_address_app_yandex_cloud = "192.168.102.23"
-internal_ip_address_db01_yandex_cloud = "192.168.102.34"
-internal_ip_address_db02_yandex_cloud = "192.168.102.25"
-internal_ip_address_gitlab_yandex_cloud = "192.168.102.19"
-internal_ip_address_monitoring_yandex_cloud = "192.168.102.29"
-internal_ip_address_proxy_lan_yandex_cloud = "192.168.101.100"
-internal_ip_address_proxy_wan_yandex_cloud = "51.250.66.88"
-internal_ip_address_runner_yandex_cloud = "192.168.102.20"
-workspace = "stage"
-
-
-```
-
-</details>
-
-![12](img/img012.PNG)
-
-По итогу - создаются 7 виртуальных машин (5 - `Ubuntu 22.04`, 1 - `Ubuntu 20.04`, proxy - `ubuntu 18.04 NAT Instance`).
-
-Создаются сеть и две подсети `192.168.101.0/24` и `192.168.102.0/24`.
+Создаются сеть и две внутренние подсети `192.168.101.0/24` и `192.168.102.0/24`.
 
 Настраиваются маршруты между ними.
 
@@ -1923,44 +249,36 @@ workspace = "stage"
 
 Состояние воркспейса `stage` сохраняется в `S3` бакете `YC`.
 
-![13](img/img013.PNG)
+![13](pic/YC_diplom.png)
 
-![14](img/img014.PNG)
+![14](pic/YC_vm.png)
 
-![15](img/img015.PNG)
+![15](pic/YC_s3.png)
 
-![16](img/img016.PNG)
+![16](pic/YC_subnets.png)
 
-Содержимое `output.tf` вывожу в `output.json`.
+![17](pic/YC_dns.png)
 
-Далее используем `envsubst`.
 
-[https://900913.ru/tldr/common/en/envsubst/](https://900913.ru/tldr/common/en/envsubst/)
+Далее экспортируем значения ip-адресов в переменные окружения и используем утилиту `envsubst` для формирования файла `ansible\hosts` из шаблона`terraform\stage\hosts.j2` и переменных окружения. 
 
-> Replace environment variables in an input file and output to a file:
-> 
-> `envsubst < {{path/to/input_file}} > {{path/to/output_file}}`
 
-Для начала нам нужно из файла `json` достать нужные данные, используем `jq` (о которой я узнал на домашних заданиях ранее, в т.ч. курсовая с `Hasicorp Vault`).
-
-Для этого запускаем `hosts_export.sh` следующего содержания:
+Для этого запускаем скрипт `terraform\stage\hosts_export.sh` следующего содержания:
 
 ```bash
 # /bin/bash
-export internal_ip_address_app_yandex_cloud=$(< output.json jq -r '.internal_ip_address_app_yandex_cloud | .value')
-export internal_ip_address_db01_yandex_cloud=$(< output.json jq -r '.internal_ip_address_db01_yandex_cloud | .value')
-export internal_ip_address_db02_yandex_cloud=$(< output.json jq -r '.internal_ip_address_db02_yandex_cloud | .value')
-export internal_ip_address_gitlab_yandex_cloud=$(< output.json jq -r '.internal_ip_address_gitlab_yandex_cloud | .value')
-export internal_ip_address_monitoring_yandex_cloud=$(< output.json jq -r '.internal_ip_address_monitoring_yandex_cloud | .value')
-export internal_ip_address_proxy_wan_yandex_cloud=$(< output.json jq -r '.internal_ip_address_proxy_wan_yandex_cloud | .value')
-export internal_ip_address_runner_yandex_cloud=$(< output.json jq -r '.internal_ip_address_runner_yandex_cloud | .value')
+export internal_ip_address_app_yandex_cloud=$(terraform output -json internal_ip_address_app_yandex_cloud)
+export internal_ip_address_db01_yandex_cloud=$(terraform output -json internal_ip_address_db01_yandex_cloud)
+export internal_ip_address_db02_yandex_cloud=$(terraform output -json internal_ip_address_db02_yandex_cloud)
+export internal_ip_address_gitlab_yandex_cloud=$(terraform output -json internal_ip_address_gitlab_yandex_cloud)
+export internal_ip_address_monitoring_yandex_cloud=$(terraform output -json internal_ip_address_monitoring_yandex_cloud)
+export internal_ip_address_proxy_wan_yandex_cloud=$(terraform output -json internal_ip_address_proxy_wan_yandex_cloud)
+export internal_ip_address_runner_yandex_cloud=$(terraform output -json internal_ip_address_runner_yandex_cloud)
 envsubst < hosts.j2 > ../../ansible/hosts
+echo "Export compleate!"
 ```
 
-Где с помощью `jq` вычленяются нужные данные из файла `output.json` и помещаются в пересенные среды, а затем при помощи `envsubst` заполняется шаблон `hosts.j2` с хостами для `Ansible` и копируется в директорию с `Ansible`. 
-
 ---
-
 ---
 ### Установка Nginx и LetsEncrypt
 
@@ -2003,76 +321,76 @@ letsencrypt_staging: true
 
 Переходим в директорию с `Ansible` и выполняем `ansible-playbook proxy.yml -i hosts`
 
-![5](img/img005.PNG)
+![5](pic/certificate_golubevny.site.png)
 
-![6](img/img006.PNG)
+![6](pic/golubevny.site.png)
 
-![7](img/img007.PNG)
+![7](pic/gitlab.golubevny.site.png)
 
-![8](img/img008.PNG)
+![8](pic/grafana.golubevny.site.png)
 
-![9](img/img009.PNG)
+![9](pic/prometheus.golubevny.site.png)
 
-![10](img/img010.PNG)
+![10](pic/alertmanager.golubevny.site.png)
 
 <details>
 <summary>Вывод Ansible</summary>
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook proxy.yml -i hosts
-
-PLAY [proxy] ********************************************************************************************************************************************************************
-
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [ovirt.ru]
-
-TASK [proxy : Install Nginx] ****************************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Set Certbot package name and versions (Ubuntu >= 20.04)] **********************************************************************************************************
-skipping: [ovirt.ru]
-
-TASK [proxy : Set Certbot package name and versions (Ubuntu < 20.04)] ***********************************************************************************************************
-ok: [ovirt.ru]
-
-TASK [proxy : Add certbot repository] *******************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Install certbot] **************************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Install certbot-nginx plugin] *************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Check if certificate already exists] ******************************************************************************************************************************
-ok: [ovirt.ru]
-
-TASK [proxy : Force generation of a new certificate] ****************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Add cron job for certbot renewal] *********************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Add nginx.conf] ***************************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Add default site] *************************************************************************************************************************************************
-changed: [ovirt.ru]
-
-TASK [proxy : Add site conf] ****************************************************************************************************************************************************
-changed: [ovirt.ru]
-
-RUNNING HANDLER [proxy : nginx systemd] *****************************************************************************************************************************************
-ok: [ovirt.ru]
-
-RUNNING HANDLER [proxy : nginx restart] *****************************************************************************************************************************************
-changed: [ovirt.ru]
-
-PLAY RECAP **********************************************************************************************************************************************************************
-ovirt.ru                   : ok=14   changed=10   unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook proxy.yml 
 
 
+PLAY [proxy] *****************************************************************************************************************************************************************************************
+
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [golubevny.site]
+
+TASK [proxy : Install Nginx name=nginx, state=latest, update_cache=True] *****************************************************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Set Certbot package name and versions (Ubuntu >= 20.04) certbot_version=0.40.0-1ubuntu0.1, certbot_nginx_version=0.40.0-0ubuntu0.1, certbot_nginx_name=python3-certbot-nginx] **********
+skipping: [golubevny.site]
+
+TASK [proxy : Set Certbot package name and versions (Ubuntu < 20.04) certbot_version=0.31.0-2~deb10u1+ubuntu{{ ansible_distribution_version }}.1+certbot+3, certbot_nginx_version=0.31.0-1+ubuntu{{ ansible_distribution_version }}.1+certbot+1, certbot_nginx_name=python-certbot-nginx] ***
+ok: [golubevny.site]
+
+TASK [proxy : Add certbot repository repo=ppa:certbot/certbot, state=present] ************************************************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Install certbot name=certbot={{ certbot_version }}, state=present] *********************************************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Install certbot-nginx plugin name={{ certbot_nginx_name }}={{ certbot_nginx_version }}, state=present] *********************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Check if certificate already exists path=/etc/letsencrypt/live/{{ domain_name }}/cert.pem] *********************************************************************************************
+ok: [golubevny.site]
+
+TASK [proxy : Force generation of a new certificate _raw_params=certbot certonly --nginx --force-renewal --email '{{ letsencrypt_email }}' --agree-tos --no-eff-email -d '{{ domain_name }}' -d 'www.{{ domain_name }}' -d 'gitlab.{{ domain_name  }}' -d 'grafana.{{ domain_name  }}' -d 'prometheus.{{ domain_name }}' -d 'alertmanager.{{ domain_name }}' {% if ansible_distribution_version >= "20.04" %} --non-interactive {% endif %} {% if letsencrypt_staging %} --staging {% endif %} {% if break_my_certs  %} --break-my-certs {% endif %}
+] ***
+changed: [golubevny.site]
+
+TASK [proxy : Add cron job for certbot renewal name=Certbot automatic renewal, job=certbot renew, month=*/2] *****************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Add nginx.conf src=templates/nginx.conf.j2, dest=/etc/nginx/nginx.conf] ****************************************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Add default site src=templates/nginx_default.conf.j2, dest=/etc/nginx/sites-enabled/default] *******************************************************************************************
+changed: [golubevny.site]
+
+TASK [proxy : Add site conf src=templates/nginx_sites.conf.j2, dest=/etc/nginx/sites-enabled/{{ domain_name }}.conf] *********************************************************************************
+changed: [golubevny.site]
+
+RUNNING HANDLER [proxy : nginx systemd name=nginx, enabled=True, state=started] **********************************************************************************************************************
+ok: [golubevny.site]
+
+RUNNING HANDLER [proxy : nginx restart name=nginx, state=restarted] **********************************************************************************************************************************
+changed: [golubevny.site]
+
+PLAY RECAP *******************************************************************************************************************************************************************************************
+golubevny.site             : ok=14   changed=10   unreachable=0    failed=0    skipped=1    rescued=0    ignored=0 
 ```
 
 </details>
@@ -2102,7 +420,19 @@ ___
 
 ---
 
-Конфигурация `master.cnf.j2`:
+Переменные задаем в файле `roles\mysql\defaults\main.yml`:
+
+```
+db_user: wordpress
+db_pass: wordpress
+db_name: wordpress
+mysql_replication_master: db01.golubevny.site 
+mysql_replication_user: replication_user
+mysql_replication_user_password: "replication_user"
+
+```
+
+Конфигурация мастера в `roles\mysql\templates\master.cnf.j2`:
 
 ```bash
 [mysqld]
@@ -2118,7 +448,7 @@ expire_logs_days=7
 binlog-do-db = {{ db_name }}
 ```
 
-Конфигурация `slave.cnf.j2`:
+Конфигурация слэйва в  `roles\mysql\templates\slave.cnf.j2`:
 
 ```bash
 [mysqld]
@@ -2137,90 +467,112 @@ replicate-do-db = {{ db_name }}
 
 [https://handyhost.ru/manuals/mysql/mysql-replication.html](https://handyhost.ru/manuals/mysql/mysql-replication.html)
 
-Для создания кластера выполняем `ansible-playbook mysql.yml -i hosts`
+Для создания кластера выполняем `ansible-playbook mysql.yml`
+
+В случае возникновения следующей ошибки доступа по ssh для узлов:
+
+```
+PLAY [db01 db02] *************************************************************************************************************************************************************************************
+
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+fatal: [db02.golubevny.site]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: Connection closed by remote host\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+fatal: [db01.golubevny.site]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: kex_exchange_identification: Connection closed by remote host\r\nConnection closed by UNKNOWN port 65535", "unreachable": true}
+
+PLAY RECAP *******************************************************************************************************************************************************************************************
+db01.golubevny.site        : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+db02.golubevny.site        : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0 
+```
+
+Выполняем удаление отпечатков от предыдущих подключений по ssh к узлу golubevny.site:
+
+```
+gny@gny-HP-Notebook:~$ ssh-keygen -f "/home/gny/.ssh/known_hosts" -R "golubevny.site"
+
+```
+И запускаем заново `ansible-playbook mysql.yml`.
 
 <details>
 <summary>Вывод Ansible</summary>
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook mysql.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook mysql.yml
 
-PLAY [db01 db02] ****************************************************************************************************************************************************************
+PLAY [db01 db02] *************************************************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [db02.ovirt.ru]
-ok: [db01.ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [db02.golubevny.site]
+ok: [db01.golubevny.site]
 
-TASK [mysql : Installing Mysql and dependencies] ********************************************************************************************************************************
-changed: [db01.ovirt.ru] => (item=mysql-server)
-changed: [db02.ovirt.ru] => (item=mysql-server)
-changed: [db01.ovirt.ru] => (item=mysql-client)
-changed: [db02.ovirt.ru] => (item=mysql-client)
-changed: [db01.ovirt.ru] => (item=python3-mysqldb)
-changed: [db02.ovirt.ru] => (item=python3-mysqldb)
-changed: [db01.ovirt.ru] => (item=libmysqlclient-dev)
-changed: [db02.ovirt.ru] => (item=libmysqlclient-dev)
+TASK [mysql : Installing Mysql and dependencies name={{ item }}, state=present, update_cache=True] ***************************************************************************************************
+changed: [db01.golubevny.site] => (item=mysql-server)
+changed: [db02.golubevny.site] => (item=mysql-server)
+changed: [db02.golubevny.site] => (item=mysql-client)
+changed: [db01.golubevny.site] => (item=mysql-client)
+changed: [db02.golubevny.site] => (item=python3-mysqldb)
+changed: [db01.golubevny.site] => (item=python3-mysqldb)
+changed: [db02.golubevny.site] => (item=libmysqlclient-dev)
+changed: [db01.golubevny.site] => (item=libmysqlclient-dev)
 
-TASK [mysql : start and enable mysql service] ***********************************************************************************************************************************
-ok: [db02.ovirt.ru]
-ok: [db01.ovirt.ru]
+TASK [mysql : start and enable mysql service name=mysql, state=started, enabled=True] ****************************************************************************************************************
+ok: [db01.golubevny.site]
+ok: [db02.golubevny.site]
 
-TASK [mysql : Creating database wordpress] **************************************************************************************************************************************
-changed: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
+TASK [mysql : Creating database wordpress name={{db_name}}, state=present] ***************************************************************************************************************************
+changed: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-TASK [mysql : Creating mysql user wordpress] ************************************************************************************************************************************
-changed: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
+TASK [mysql : Creating mysql user wordpress name={{db_user}}, password={{db_pass}}, priv=*.*:ALL, host=%, state=present] *****************************************************************************
+changed: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-TASK [mysql : Enable remote login to mysql] *************************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [db01.ovirt.ru]
+TASK [mysql : Enable remote login to mysql path=/etc/mysql/mysql.conf.d/mysqld.cnf, regexp=^bind-address, line=bind-address = 0.0.0.0, backup=True] **************************************************
+changed: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-TASK [mysql : Remove anonymous MySQL users.] ************************************************************************************************************************************
-ok: [db01.ovirt.ru]
-ok: [db02.ovirt.ru]
+TASK [mysql : Remove anonymous MySQL users. name=, state=absent] *************************************************************************************************************************************
+ok: [db01.golubevny.site]
+ok: [db02.golubevny.site]
 
-TASK [mysql : Remove MySQL test database.] **************************************************************************************************************************************
-ok: [db01.ovirt.ru]
-ok: [db02.ovirt.ru]
+TASK [mysql : Remove MySQL test database. name=test, state=absent] ***********************************************************************************************************************************
+ok: [db01.golubevny.site]
+ok: [db02.golubevny.site]
 
-TASK [mysql : Copy master.cnf] **************************************************************************************************************************************************
-skipping: [db02.ovirt.ru]
-changed: [db01.ovirt.ru]
+TASK [mysql : Copy master.cnf src=templates/master.cnf.j2, dest=/etc/mysql/mysql.conf.d/master.cnf] **************************************************************************************************
+skipping: [db02.golubevny.site]
+changed: [db01.golubevny.site]
 
-TASK [mysql : Copy slave.cnf] ***************************************************************************************************************************************************
-skipping: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
+TASK [mysql : Copy slave.cnf src=templates/slave.cnf.j2, dest=/etc/mysql/mysql.conf.d/slave.cnf] *****************************************************************************************************
+skipping: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-TASK [mysql : Ensure replication user exists on master.] ************************************************************************************************************************
-skipping: [db02.ovirt.ru]
-changed: [db01.ovirt.ru]
+TASK [mysql : Ensure replication user exists on master. name={{ mysql_replication_user }}, host=%, password={{ mysql_replication_user_password }}, priv=*.*:REPLICATION SLAVE,REPLICATION CLIENT, state=present] ***
+skipping: [db02.golubevny.site]
+changed: [db01.golubevny.site]
 
-TASK [mysql : check slave replication status] ***********************************************************************************************************************************
-skipping: [db01.ovirt.ru]
-ok: [db02.ovirt.ru]
+TASK [mysql : check slave replication status mode=getreplica] ****************************************************************************************************************************************
+skipping: [db01.golubevny.site]
+ok: [db02.golubevny.site]
 
-TASK [mysql : Check master replication status] **********************************************************************************************************************************
-skipping: [db01.ovirt.ru]
-ok: [db02.ovirt.ru -> db01.ovirt.ru(192.168.102.34)]
+TASK [mysql : Check master replication status mode=getprimary] ***************************************************************************************************************************************
+skipping: [db01.golubevny.site]
+ok: [db02.golubevny.site -> db01.golubevny.site(192.168.102.28)]
 
-TASK [mysql : configure replication on the slave] *******************************************************************************************************************************
-skipping: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
+TASK [mysql : configure replication on the slave mode=changeprimary, primary_host={{ mysql_replication_master }}, primary_user={{ mysql_replication_user }}, primary_password={{ mysql_replication_user_password }}, primary_log_file={{ master.File }}, primary_log_pos={{ master.Position }}] ***
+skipping: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-TASK [mysql : start replication] ************************************************************************************************************************************************
-skipping: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
+TASK [mysql : start replication mode=startreplica] ***************************************************************************************************************************************************
+skipping: [db01.golubevny.site]
+changed: [db02.golubevny.site]
 
-RUNNING HANDLER [mysql : Restart mysql] *****************************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [db01.ovirt.ru]
+RUNNING HANDLER [mysql : Restart mysql name=mysql, state=restarted] **********************************************************************************************************************************
+changed: [db02.golubevny.site]
+changed: [db01.golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-db01.ovirt.ru              : ok=11   changed=7    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0   
-db02.ovirt.ru              : ok=14   changed=8    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0   
+PLAY RECAP *******************************************************************************************************************************************************************************************
+db01.golubevny.site        : ok=11   changed=7    unreachable=0    failed=0    skipped=5    rescued=0    ignored=0   
+db02.golubevny.site        : ok=14   changed=8    unreachable=0    failed=0    skipped=2    rescued=0    ignored=0 
 
 ```
 
@@ -2256,17 +608,18 @@ ___
 
 Далее ставим `Wordpress`, в качестве вебсервера возьмем `nginx` и `php8.1`.
 
-Так же выполним предварительные настройки `Wordpress`, шаблонизировав `wp-config.php.j2`.
-
-А именно внесем туда:
+Так же выполним предварительные настройки `Wordpress` в файле `roles\app\defaults\main.yml`:
 
 ```bash
-define( 'DB_NAME', '{{ db_name }}' );
-define( 'DB_USER', '{{ db_user }}' );
-define( 'DB_PASSWORD', '{{ db_password }}' );
-define( 'DB_HOST', '{{ db_host }}' );
+domain: "golubevny.site"
+download_url: "http://wordpress.org/latest.tar.gz"
+wpdirectory: "/var/www"
+db_name: "wordpress"
+: "wordpress"
+db_password: "wordpress"db_user
+db_host: "db01.golubevny.site"
 ```
-Выполняем `ansible-playbook app.yml -i hosts`
+Выполняем `ansible-playbook app.yml`
 
 После выполнения плейбука остается ввести данные пользователя:
 
@@ -2283,81 +636,84 @@ define( 'DB_HOST', '{{ db_host }}' );
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook app.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook app.yml
 
-PLAY [app] **********************************************************************************************************************************************************************
+PLAY [app] *******************************************************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [app.ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [app.golubevny.site]
 
-TASK [app : Install Nginx] ******************************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : Install Nginx name=nginx, state=latest, update_cache=True] *******************************************************************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : Disable default site] ***********************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : Disable default site path=/etc/nginx/sites-enabled/default, state=absent] ****************************************************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : Remove default site] ************************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : Remove default site path=/etc/nginx/sites-available/default, state=absent] ***************************************************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : install php] ********************************************************************************************************************************************************
-changed: [app.ovirt.ru] => (item=php8.1)
-changed: [app.ovirt.ru] => (item=php8.1-cgi)
-changed: [app.ovirt.ru] => (item=php8.1-fpm)
-changed: [app.ovirt.ru] => (item=php8.1-memcache)
-changed: [app.ovirt.ru] => (item=php8.1-memcached)
-changed: [app.ovirt.ru] => (item=php8.1-mysql)
-changed: [app.ovirt.ru] => (item=php8.1-gd)
-changed: [app.ovirt.ru] => (item=php8.1-curl)
-changed: [app.ovirt.ru] => (item=php8.1-xmlrpc)
+TASK [app : install php name={{ item }}, state=present, update_cache=True] ***************************************************************************************************************************
+changed: [app.golubevny.site] => (item=php8.1)
+changed: [app.golubevny.site] => (item=php8.1-cgi)
+changed: [app.golubevny.site] => (item=php8.1-fpm)
+changed: [app.golubevny.site] => (item=php8.1-memcache)
+changed: [app.golubevny.site] => (item=php8.1-memcached)
+changed: [app.golubevny.site] => (item=php8.1-mysql)
+changed: [app.golubevny.site] => (item=php8.1-gd)
+changed: [app.golubevny.site] => (item=php8.1-curl)
+changed: [app.golubevny.site] => (item=php8.1-xmlrpc)
 
-TASK [app : Uninstall Apache2] **************************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : Uninstall Apache2 name=apache2, state=absent, purge=True] ********************************************************************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : change listen socket] ***********************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : change listen socket dest=/etc/php/8.1/fpm/pool.d/www.conf, regexp=^listen = /run/php/php8.1-fpm.sock, line=listen = /var/run/php-fpm.sock] **********************************************
+changed: [app.golubevny.site]
 
-TASK [app : install nginx configuration] ****************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : install nginx configuration src=templates/wordpress.conf.j2, dest=/etc/nginx/sites-available/wordpress.conf] *****************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : activate site configuration] ****************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : activate site configuration src=/etc/nginx/sites-available/wordpress.conf, dest=/etc/nginx/sites-enabled/wordpress.conf, state=link] *****************************************************
+changed: [app.golubevny.site]
 
-TASK [app : download WordPress] *************************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : download WordPress url={{ download_url }}, dest=/tmp/latest.tar.gz] **********************************************************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : creating directory for WordPress] ***********************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : creating directory for WordPress path={{ wpdirectory }}, state=directory, owner=www-data, group=www-data] ********************************************************************************
+changed: [app.golubevny.site]
 
-TASK [app : unpack WordPress installation] **************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : unpack WordPress installation _raw_params=tar xvfz /tmp/latest.tar.gz -C {{ wpdirectory }} && chown -R www-data:www-data {{ wpdirectory }}] **********************************************
+changed: [app.golubevny.site]
 
-TASK [app : Set up wp-config] ***************************************************************************************************************************************************
-changed: [app.ovirt.ru]
+TASK [app : Set up wp-config src=templates/wp-config.php.j2, dest={{ wpdirectory }}/wordpress/wp-config.php] *****************************************************************************************
+changed: [app.golubevny.site]
 
-RUNNING HANDLER [app : nginx systemd] *******************************************************************************************************************************************
-ok: [app.ovirt.ru]
+RUNNING HANDLER [app : nginx systemd name=nginx, enabled=True, state=started] ************************************************************************************************************************
+ok: [app.golubevny.site]
 
-RUNNING HANDLER [app : restart php-fpm] *****************************************************************************************************************************************
-changed: [app.ovirt.ru]
+RUNNING HANDLER [app : nginx restart name=nginx, state=restarted] ************************************************************************************************************************************
+changed: [app.golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-app.ovirt.ru               : ok=12   changed=13   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0 
+RUNNING HANDLER [app : restart php-fpm name=php8.1-fpm, state=restarted] *****************************************************************************************************************************
+changed: [app.golubevny.site]
+
+PLAY RECAP *******************************************************************************************************************************************************************************************
+app.golubevny.site         : ok=16   changed=14   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
 
 ```
 
 </details>
+ В результате получили следующее:
 
-![17](img/img017.PNG)
+![18](pic/wordpress.lang.png)
 
-![18](img/img018.PNG)
+![19](pic/wordpress.install.png)
 
-![19](img/img019.PNG)
+![20](pic/wordpress.installed.png)
 
-![20](img/img020.PNG)
+![21](pic/wordpress.console.png)
 
-![21](img/img021.PNG)
+![22](pic/wordpress.helloworld.png)
 
-![22](img/img022.PNG)
 ---
 
 ---
@@ -2395,10 +751,10 @@ app.ovirt.ru               : ok=12   changed=13   unreachable=0    failed=0    s
 
 ```bash
 TASK [gitlab : Install GitLab] ********************************************************************************************************************************************************
-fatal: [gitlab.ovirt.ru]: FAILED! => {"ansible_job_id": "129742348762.35918", "changed": false, "finished": 1, "msg": "No package matching 'gitlab-ce' is available"}
+fatal: [gitlab.golubevny.site]: FAILED! => {"ansible_job_id": "129742348762.35918", "changed": false, "finished": 1, "msg": "No package matching 'gitlab-ce' is available"}
 
 PLAY RECAP ****************************************************************************************************************************************************************************
-gitlab.ovirt.ru            : ok=7    changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+gitlab.golubevny.site            : ok=7    changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
 ```
 
 Рано ее еще ставить, 20.04 нужно пока что:
@@ -2430,243 +786,153 @@ GITLAB_SHARED_RUNNERS_REGISTRATION_TOKEN: "{{ gitlab_runners_registration_token 
   notify: restart gitlab
 ```
 
-Выполняем `ansible-playbook gitlab.yml -i hosts`, идем пить кофе, разворачивается не быстро.
+Выполняем `ansible-playbook gitlab.yml`, идем пить кофе, разворачивается не быстро.
 
 <details>
 <summary>Вывод Ansible</summary>
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook gitlab.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook gitlab.yml
 
-PLAY [gitlab] *******************************************************************************************************************************************************************
+PLAY [gitlab] ****************************************************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [gitlab.ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [gitlab.golubevny.site]
 
-TASK [gitlab : Check if GitLab configuration file already exists.] **************************************************************************************************************
-ok: [gitlab.ovirt.ru]
+TASK [gitlab : Check if GitLab configuration file already exists. path=/etc/gitlab/gitlab.rb] ********************************************************************************************************
+ok: [gitlab.golubevny.site]
 
-TASK [gitlab : Check if GitLab is already installed.] ***************************************************************************************************************************
-ok: [gitlab.ovirt.ru]
+TASK [gitlab : Check if GitLab is already installed. path=/usr/bin/gitlab-ctl] ***********************************************************************************************************************
+ok: [gitlab.golubevny.site]
 
-TASK [gitlab : Install GitLab dependencies (Debian).] ***************************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Install GitLab dependencies (Debian). name=gnupg2, state=present] *********************************************************************************************************************
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : Install GitLab dependencies.] ************************************************************************************************************************************
-ok: [gitlab.ovirt.ru] => (item=curl)
-ok: [gitlab.ovirt.ru] => (item=tzdata)
-changed: [gitlab.ovirt.ru] => (item=perl)
-ok: [gitlab.ovirt.ru] => (item=openssl)
-changed: [gitlab.ovirt.ru] => (item=postfix)
-ok: [gitlab.ovirt.ru] => (item=openssh-server)
+TASK [gitlab : Install GitLab dependencies. name={{ item }}, update_cache=True, state=present] *******************************************************************************************************
+ok: [gitlab.golubevny.site] => (item=curl)
+ok: [gitlab.golubevny.site] => (item=tzdata)
+changed: [gitlab.golubevny.site] => (item=perl)
+ok: [gitlab.golubevny.site] => (item=openssl)
+changed: [gitlab.golubevny.site] => (item=postfix)
+ok: [gitlab.golubevny.site] => (item=openssh-server)
 
-TASK [gitlab : Download GitLab repository installation script.] *****************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Download GitLab repository installation script. url={{ gitlab_repository_installation_script_url }}, dest=/tmp/gitlab_install_repository.sh, mode=a+x, validate_certs={{ gitlab_download_validate_certs }}] ***
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : Install GitLab repository.] **************************************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Install GitLab repository. _raw_params=bash /tmp/gitlab_install_repository.sh] ********************************************************************************************************
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : Define the Gitlab package name.] *********************************************************************************************************************************
-skipping: [gitlab.ovirt.ru]
+TASK [gitlab : Define the Gitlab package name. gitlab_package_name={{ gitlab_edition }}{{ gitlab_package_version_separator }}{{ gitlab_version }}] ***************************************************
+skipping: [gitlab.golubevny.site]
 
-TASK [gitlab : Install GitLab] **************************************************************************************************************************************************
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC POLL on gitlab.ovirt.ru: jid=325597879091.5077 started=1 finished=0
-ASYNC OK on gitlab.ovirt.ru: jid=325597879091.5077
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Install GitLab name={{ gitlab_package_name | default(gitlab_edition) }}, state=present] ***********************************************************************************************
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC POLL on gitlab.golubevny.site: jid=80930504712.5163 started=1 finished=0
+ASYNC OK on gitlab.golubevny.site: jid=80930504712.5163
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : Reconfigure GitLab (first run).] *********************************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Reconfigure GitLab (first run). creates=/var/opt/gitlab/bootstrapped, _raw_params=gitlab-ctl reconfigure] *****************************************************************************
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : Create GitLab SSL configuration folder.] *************************************************************************************************************************
-skipping: [gitlab.ovirt.ru]
+TASK [gitlab : Create GitLab SSL configuration folder. path=/etc/gitlab/ssl, state=directory, owner=root, group=root, mode=448] **********************************************************************
+skipping: [gitlab.golubevny.site]
 
-TASK [gitlab : Create self-signed certificate.] *********************************************************************************************************************************
-skipping: [gitlab.ovirt.ru]
+TASK [gitlab : Create self-signed certificate. creates={{ gitlab_ssl_certificate }}, _raw_params=openssl req -new -nodes -x509 -subj "{{ gitlab_self_signed_cert_subj }}" -days 3650 -keyout {{ gitlab_ssl_certificate_key }} -out {{ gitlab_ssl_certificate }} -extensions v3_ca] ***
+skipping: [gitlab.golubevny.site]
 
-TASK [gitlab : Fail when Password is shorter than 8 chars] **********************************************************************************************************************
-skipping: [gitlab.ovirt.ru]
+TASK [gitlab : Fail when Password is shorter than 8 chars msg=The password needs to be at least 8 characters long] ***********************************************************************************
+skipping: [gitlab.golubevny.site]
 
-TASK [gitlab : Copy GitLab configuration file.] *********************************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : Copy GitLab configuration file. src={{ gitlab_config_template }}, dest=/etc/gitlab/gitlab.rb, owner=root, group=root, mode=384] *******************************************************
+changed: [gitlab.golubevny.site]
 
-TASK [gitlab : use the rails console to change the password] ********************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+TASK [gitlab : use the rails console to change the password _raw_params=sudo gitlab-rails runner "user = User.where(id{{':'}} 1).first; user.password = '{{gitlab_initial_root_password}}'; user.password_confirmation = '{{gitlab_initial_root_password}}'; user.save!"] ***
+changed: [gitlab.golubevny.site]
 
-RUNNING HANDLER [gitlab : restart gitlab] ***************************************************************************************************************************************
-changed: [gitlab.ovirt.ru]
+RUNNING HANDLER [gitlab : restart gitlab _raw_params=gitlab-ctl reconfigure] *************************************************************************************************************************
+changed: [gitlab.golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-gitlab.ovirt.ru            : ok=12   changed=9    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0 
+PLAY RECAP *******************************************************************************************************************************************************************************************
+gitlab.golubevny.site      : ok=12   changed=9    unreachable=0    failed=0    skipped=4    rescued=0    ignored=0 
 
 ```
 
 </details>
 
-![23](img/img023.PNG)
+![23](pic/gitlab.login.png)
 
 Далее создадим проект `wordpress`.
 
-![24](img/img024.PNG)
 
 Теперь нужно зайти по `ssh` на хост `app` с `wordpress` и запушить его в репозиторий.
 
 План действий:
 
 ```bash
-user@user-ubuntu:~$ ssh ovirt.ru -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W app.ovirt:22 -q user@ovirt.ru -o StrictHostKeyChecking=no "
+gny@gny-HP-Notebook:~$ ssh user@golubevny.site -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W app.ovirt:22 -q user@golubevny.site -o StrictHostKeyChecking=no "
 user@app:~$ cd /var/www/wordpress/
 user@app:/var/www/wordpress$ sudo vi .gitignore
 user@app:/var/www/wordpress$ sudo git config --global init.defaultBranch main
 user@app:/var/www/wordpress$ sudo git config --global --add safe.directory /var/www/wordpress
 user@app:/var/www/wordpress$ sudo git init
 user@app:/var/www/wordpress$ sudo git add .
-user@app:/var/www/wordpress$ sudo git commit -m "Push from app server"
-user@app:/var/www/wordpress$ sudo git push --set-upstream http://gitlab.ovirt.ru/root/wordpress.git main
+user@app:/var/www/wordpress$ sudo git remote add origin https://gitlab.com/GolybevNY/wordpress.git
+
+user@app:/var/www/wordpress$ sudo git commit -m "Commit in app.golubevny.site"
+user@app:/var/www/wordpress$ sudo git remote add origin http://gitlab.golubevny.site/root/wordpress.git
+
+user@app:/var/www/wordpress$ sudo git pull --rebase origin main
+user@app:/var/www/wordpress$ sudo git push -uf origin main
+
 ```
 
 В `.gitignore` добавили `.git`
 
-Что получилось:
+Результат пуша в репозиторий:
 
-```bash
-user@user-ubuntu:~$ ssh ovirt.ru -o StrictHostKeyChecking=no -o ProxyCommand="ssh -W app.ovirt:22 -q user@ovirt.ru -o StrictHostKeyChecking=no "
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!
-Someone could be eavesdropping on you right now (man-in-the-middle attack)!
-It is also possible that a host key has just been changed.
-The fingerprint for the ED25519 key sent by the remote host is
-SHA256:qJFxzW+ayXhv/RTfQjSf2IsTiQhs8L0Ea/NfQrsSeFc.
-Please contact your system administrator.
-Add correct host key in /home/user/.ssh/known_hosts to get rid of this message.
-Offending ECDSA key in /home/user/.ssh/known_hosts:2
-  remove with:
-  ssh-keygen -f "/home/user/.ssh/known_hosts" -R "ovirt.ru"
-Password authentication is disabled to avoid man-in-the-middle attacks.
-Keyboard-interactive authentication is disabled to avoid man-in-the-middle attacks.
-UpdateHostkeys is disabled because the host key is not trusted.
-Welcome to Ubuntu 22.04.1 LTS (GNU/Linux 5.15.0-46-generic x86_64)
-
- * Documentation:  https://help.ubuntu.com
- * Management:     https://landscape.canonical.com
- * Support:        https://ubuntu.com/advantage
-
-  System information as of Fri Sep  9 09:38:41 PM UTC 2022
-
-  System load:  0.0               Processes:             156
-  Usage of /:   44.5% of 9.76GB   Users logged in:       0
-  Memory usage: 7%                IPv4 address for eth0: 192.168.102.23
-  Swap usage:   0%
-
- * Super-optimized for small spaces - read how we shrank the memory
-   footprint of MicroK8s to make it the smallest full K8s around.
-
-   https://ubuntu.com/blog/microk8s-memory-optimisation
-
-23 updates can be applied immediately.
-14 of these updates are standard security updates.
-To see these additional updates run: apt list --upgradable
-
-
-Last login: Fri Sep  9 20:53:43 2022 from 192.168.101.100
-user@app:~$ cd /var/www/wordpress/
-user@app:/var/www/wordpress$ sudo vi .gitignore
-user@app:/var/www/wordpress$ sudo git config --global init.defaultBranch main
-user@app:/var/www/wordpress$ sudo git config --global --add safe.directory /var/www/wordpress
-user@app:/var/www/wordpress$ sudo git init
-Initialized empty Git repository in /var/www/wordpress/.git/
-user@app:/var/www/wordpress$ sudo git add .
-user@app:/var/www/wordpress$ sudo git commit -m "Push from app server"
-[main (root-commit) 359186e] Push from app server
- Committer: root <root@app.ovirt.ru>
-Your name and email address were configured automatically based
-on your username and hostname. Please check that they are accurate.
-You can suppress this message by setting them explicitly:
-
-    git config --global user.name "Your Name"
-    git config --global user.email you@example.com
-
-After doing this, you may fix the identity used for this commit with:
-
-    git commit --amend --reset-author
-
- 2892 files changed, 1286303 insertions(+)
- create mode 100644 .gitignore
- create mode 100644 index.php
- create mode 100644 license.txt
- create mode 100644 readme.html
- create mode 100644 wp-activate.php
- create mode 100644 wp-admin/about.php
-...
-...
- create mode 100644 wp-links-opml.php
- create mode 100644 wp-load.php
- create mode 100644 wp-login.php
- create mode 100644 wp-mail.php
- create mode 100644 wp-settings.php
- create mode 100644 wp-signup.php
- create mode 100644 wp-trackback.php
- create mode 100644 xmlrpc.php
-user@app:/var/www/wordpress$ sudo git push --set-upstream http://gitlab.ovirt.ru/root/wordpress.git main
-Username for 'http://gitlab.ovirt.ru': root
-Password for 'http://root@gitlab.ovirt.ru': 
-Enumerating objects: 3103, done.
-Counting objects: 100% (3103/3103), done.
-Delta compression using up to 4 threads
-Compressing objects: 100% (3035/3035), done.
-Writing objects: 100% (3103/3103), 19.21 MiB | 6.82 MiB/s, done.
-Total 3103 (delta 513), reused 0 (delta 0), pack-reused 0
-remote: Resolving deltas: 100% (513/513), done.
-To http://gitlab.ovirt.ru/root/wordpress.git
- * [new branch]      main -> main
-Branch 'main' set up to track remote branch 'main' from 'http://gitlab.ovirt.ru/root/wordpress.git'.
-```
-
-![25](img/img025.PNG)
+![25](pic/gitlab.repo.wordpress.png)
 
 Теперь подготовим `pipeline` и запустим `runner`. 
 
 Первое, в нашем проекте, заходим в `Settings` -> `CI/CD` -> `Variables` и добавляем переменную `ssh_key`, содержащую закрытую часть ключа, для авторизации на сервере `app` с нашего `runner`а.
 
-![26](img/img026.PNG)
+![26](pic/gitlab.ssh_key.png)
 
 Так же в `Settings` -> `CI/CD` -> `Runners` убедимся, что сейчас `runner`ов нет.
 
-![27](img/img027.PNG)
+![27](pic/gitlab.norunners.png)
 
 Настраиваем `pipeline`, заходим в `CI/CD` -> `Pipelines` -> `Editor`.
 
-![28](img/img028.PNG)
+![28](pic/gitlab.pipeline_editor.png)
 
 Жмем `Configure pipeline` и заменяем всё следующим кодом:
 
@@ -2686,14 +952,14 @@ deploy-job:
   stage: deploy
   script:
     - echo "Deploying files..."
-    - ssh -o StrictHostKeyChecking=no user@app.ovirt.ru sudo chown user /var/www/wordpress/ -R
-    - rsync -arvzc -e "ssh -o StrictHostKeyChecking=no" ./* user@app.ovirt.ru:/var/www/wordpress/
-    - ssh -o StrictHostKeyChecking=no user@app.ovirt.ru sudo chown www-data /var/www/wordpress/ -R 
+    - ssh -o StrictHostKeyChecking=no user@app.golubevny.site sudo chown user /var/www/wordpress/ -R
+    - rsync -arvzc -e "ssh -o StrictHostKeyChecking=no" ./* user@app.golubevny.site:/var/www/wordpress/
+    - ssh -o StrictHostKeyChecking=no user@app.golubevny.site sudo chown www-data /var/www/wordpress/ -R 
 ```
 
-![29](img/img029.PNG)
+![29](pic/gitlab.pipeline_edit.png)
 
-![29](img/img030.PNG)
+![29](pic/gitlab.pipelines.png)
 
 Который:
 - добавляет закрытый ключ `ssh` из переменной `ssh_key` на `runner`а
@@ -2719,273 +985,300 @@ gitlab_runner_registration_token: 'GR1348941mRspncv4vqG9yCwuCTHv'
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook runner.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook runner.yml
 
-PLAY [runner] *******************************************************************************************************************************************************************
+PLAY [runner] ****************************************************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Load platform-specific variables] ********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Load platform-specific variables _raw_params={{ lookup('first_found', possible_files) }}] *********************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : (Container) Pull Image from Registry] ****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Container) Pull Image from Registry name={{ gitlab_runner_container_image }}:{{ gitlab_runner_container_tag }}, source=pull] *********************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Container) Define Container volume Path] ************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Container) Define Container volume Path state=directory, path={{ gitlab_runner_container_mount_path }}] ******************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Container) List configured runners] *****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Container) List configured runners name={{ gitlab_runner_container_name }}-list, image={{ gitlab_runner_container_image }}:{{ gitlab_runner_container_tag }}, command=list, mounts=[{'type': 'bind', 'source': '{{ gitlab_runner_container_mount_path }}', 'target': '/etc/gitlab-runner'}], cleanup=True, interactive=True, tty=True, detach=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Container) Check runner is registered] **************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Container) Check runner is registered name={{ gitlab_runner_container_name }}-check, image={{ gitlab_runner_container_image }}:{{ gitlab_runner_container_tag }}, command=verify, mounts=[{'type': 'bind', 'source': '{{ gitlab_runner_container_mount_path }}', 'target': '/etc/gitlab-runner'}], cleanup=True, interactive=True, tty=True, detach=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : configured_runners?] *********************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : configured_runners? msg={{ configured_runners.container.Output }}] ********************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : verified_runners?] ***********************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : verified_runners? msg={{ verified_runners.container.Output }}] ************************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Container) Register GitLab Runner] ******************************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
+TASK [runner : (Container) Register GitLab Runner _raw_params=register-runner-container.yml] *********************************************************************************************************
+skipping: [runner.golubevny.site] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
 
-TASK [runner : Create .gitlab-runner dir] ***************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Create .gitlab-runner dir path={{ gitlab_runner_config_file_location }}, state=directory, mode=0700] **********************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Ensure config.toml exists] ***************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Ensure config.toml exists path={{ gitlab_runner_config_file }}, state=touch, modification_time=preserve, access_time=preserve] ********************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Set concurrent option] *******************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Set concurrent option dest={{ gitlab_runner_config_file }}, regexp=^(\s*)concurrent =, line=\1concurrent = {{ gitlab_runner_concurrent }}, state=present, backrefs=True] **************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add listen_address to config] ************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^listen_address =, line=listen_address = "{{ gitlab_runner_listen_address }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add log_format to config] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add log_format to config dest={{ gitlab_runner_config_file }}, regexp=^log_format =, line=log_format = "{{ gitlab_runner_log_format|default("runner") }}", insertbefore=BOF, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add sentry dsn to config] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add sentry dsn to config dest={{ gitlab_runner_config_file }}, regexp=^sentry_dsn =, line=sentry_dsn = "{{ gitlab_runner_sentry_dsn }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add session server listen_address to config] *********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add session server listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^(\s+)listen_address =, line=  listen_address = "{{ gitlab_runner_session_server_listen_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_listen_address | length > 0 else 'absent' }}] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add session server advertise_address to config] ******************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add session server advertise_address to config dest={{ gitlab_runner_config_file }}, regexp=^\s*advertise_address =, line=  advertise_address = "{{ gitlab_runner_session_server_advertise_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_advertise_address | length > 0 else 'absent' }}] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add session server session_timeout to config] ********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add session server session_timeout to config dest={{ gitlab_runner_config_file }}, regexp=^\s*session_timeout =, line=  session_timeout = {{ gitlab_runner_session_server_session_timeout }}, insertafter=^\s*\[session_server\], state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Get existing config.toml] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Get existing config.toml src={{ gitlab_runner_config_file }}] *************************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Get pre-existing runner configs] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Get pre-existing runner configs runner_configs={{ (runner_config_file['content'] | b64decode).split('[[runners]]
+') }}] ****************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Create temporary directory] **************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Create temporary directory state=directory, suffix=gitlab-runner-config] **************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Write config section for each runner] ****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Write config section for each runner _raw_params=config-runner-container.yml] *********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Assemble new config.toml] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Assemble new config.toml src={{ temp_runner_config_dir.path }}, dest={{ gitlab_runner_config_file }}, delimiter=[[runners]]\n, backup=True, validate=docker run -i --rm -v %s:/gitlab-runner.conf
+{{ gitlab_runner_container_image }}:{{ gitlab_runner_container_tag }}
+verify -c /gitlab-runner.conf
+, mode=384] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Container) Start the container] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Container) Start the container name={{ gitlab_runner_container_name }}, image={{ gitlab_runner_container_image }}:{{ gitlab_runner_container_tag }}, restart_policy={{ gitlab_runner_container_restart_policy }}, mounts=[{'type': 'bind', 'source': '{{ gitlab_runner_container_mount_path }}', 'target': '/etc/gitlab-runner'}, {'type': 'bind', 'source': '/var/run/docker.sock', 'target': '/var/run/docker.sock'}], network_mode={{ gitlab_runner_container_network }}] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Debian) Get Gitlab repository installation script] **************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : (Debian) Get Gitlab repository installation script url=https://packages.gitlab.com/install/repositories/runner/{{ gitlab_runner_package_name }}/script.deb.sh, dest=/tmp/gitlab-runner.script.deb.sh, mode=484] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : (Debian) Install Gitlab repository] ******************************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : (Debian) Install Gitlab repository creates=/etc/apt/sources.list.d/runner_{{ gitlab_runner_package_name }}.list, _raw_params=bash /tmp/gitlab-runner.script.deb.sh] *******************
+changed: [runner.golubevny.site]
 
-TASK [runner : (Debian) Update gitlab_runner_package_name] **********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Debian) Update gitlab_runner_package_name gitlab_runner_package={{ gitlab_runner_package_name }}={{ gitlab_runner_package_version }}, gitlab_runner_package_state=present] ***********
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Debian) Set gitlab_runner_package_name] *************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : (Debian) Set gitlab_runner_package_name gitlab_runner_package={{ gitlab_runner_package_name }}, gitlab_runner_package_state=latest] ***************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : (Debian) Install GitLab Runner] **********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Debian) Install GitLab Runner name={{ gitlab_runner_package }}, state={{ gitlab_runner_package_state }}] *****************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Debian) Install GitLab Runner] **********************************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : (Debian) Install GitLab Runner name={{ gitlab_runner_package }}, state={{ gitlab_runner_package_state }}] *****************************************************************************
+changed: [runner.golubevny.site]
 
-TASK [runner : (Debian) Remove ~/gitlab-runner/.bash_logout on debian buster and ubuntu focal] **********************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Debian) Remove ~/gitlab-runner/.bash_logout on debian buster and ubuntu focal path=/home/gitlab-runner/.bash_logout, state=absent] ***************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists] ******************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists path=/etc/systemd/system/gitlab-runner.service.d, state=directory, owner=root, group=root, mode=493] ***********************
+changed: [runner.golubevny.site]
 
-TASK [runner : Add reload command to GitLab Runner system service] **************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Add reload command to GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/exec-reload.conf, content=[Service]
+ExecReload=/bin/kill -HUP $MAINPID
+] ************
+changed: [runner.golubevny.site]
 
-TASK [runner : Configure graceful stop for GitLab Runner system service] ********************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Configure graceful stop for GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/kill.conf, content=[Service]
+TimeoutStopSec={{ gitlab_runner_timeout_stop_seconds }}
+KillSignal=SIGQUIT
+] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : Force systemd to reread configs] *********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Force systemd to reread configs daemon_reload=True] ***********************************************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : (RedHat) Get Gitlab repository installation script] **************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (RedHat) Get Gitlab repository installation script url=https://packages.gitlab.com/install/repositories/runner/{{ gitlab_runner_package_name }}/script.rpm.sh, dest=/tmp/gitlab-runner.script.rpm.sh, mode=484] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (RedHat) Install Gitlab repository] ******************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (RedHat) Install Gitlab repository creates=/etc/yum.repos.d/runner_{{ gitlab_runner_package_name }}.repo, _raw_params={% if ansible_distribution == "Rocky" %} env os=el dist={{ ansible_distribution_major_version }} {% endif %} bash /tmp/gitlab-runner.script.rpm.sh
+] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (RedHat) Update gitlab_runner_package_name] **********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (RedHat) Update gitlab_runner_package_name gitlab_runner_package={{ gitlab_runner_package_name }}-{{ gitlab_runner_package_version }}, gitlab_runner_package_state=present] ***********
+skipping: [runner.golubevny.site]
 
-TASK [runner : (RedHat) Set gitlab_runner_package_name] *************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (RedHat) Set gitlab_runner_package_name gitlab_runner_package={{ gitlab_runner_package_name }}, gitlab_runner_package_state=latest] ***************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (RedHat) Install GitLab Runner] **********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (RedHat) Install GitLab Runner name={{ gitlab_runner_package }}, state={{ gitlab_runner_package_state }}] *****************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists] ******************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists path=/etc/systemd/system/gitlab-runner.service.d, state=directory, owner=root, group=root, mode=493] ***********************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add reload command to GitLab Runner system service] **************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add reload command to GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/exec-reload.conf, content=[Service]
+ExecReload=/bin/kill -HUP $MAINPID
+] ************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Configure graceful stop for GitLab Runner system service] ********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Configure graceful stop for GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/kill.conf, content=[Service]
+TimeoutStopSec={{ gitlab_runner_timeout_stop_seconds }}
+KillSignal=SIGQUIT
+] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Force systemd to reread configs] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Force systemd to reread configs daemon_reload=True] ***********************************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Check gitlab-runner executable exists] *******************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Check gitlab-runner executable exists path={{ gitlab_runner_executable }}] ****************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Set fact -> gitlab_runner_exists] ************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Set fact -> gitlab_runner_exists gitlab_runner_exists={{ gitlab_runner_exists.stat.exists }}] *********************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Get existing version] ************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Get existing version _raw_params={{ gitlab_runner_executable }} --version | awk '/Version: ([\d\.]*)/{print $2}'] *************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Set fact -> gitlab_runner_existing_version] **************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Set fact -> gitlab_runner_existing_version gitlab_runner_existing_version={{ existing_version_shell.stdout if existing_version_shell.rc == 0 else '0' }}] *********************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Precreate gitlab-runner log directory] *******************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Precreate gitlab-runner log directory path=/usr/local/var/log, state=directory, owner={{ ansible_user_id | string }}] *********************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Download GitLab Runner] **********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Download GitLab Runner url={{ gitlab_runner_download_url }}, dest={{ gitlab_runner_executable }}, force=True] *****************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Setting Permissions for gitlab-runner executable] ********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Setting Permissions for gitlab-runner executable path={{ gitlab_runner_executable }}, owner={{ ansible_user_id | string }}, group={{ ansible_user_gid | string }}, mode=+x] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Install GitLab Runner] ***********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Install GitLab Runner _raw_params={{ gitlab_runner_executable }} install] *****************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Start GitLab Runner] *************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Start GitLab Runner _raw_params={{ gitlab_runner_executable }} start] *********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Stop GitLab Runner] **************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Stop GitLab Runner _raw_params={{ gitlab_runner_executable }} stop] ***********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Download GitLab Runner] **********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Download GitLab Runner url={{ gitlab_runner_download_url }}, dest={{ gitlab_runner_executable }}, force=True] *****************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Setting Permissions for gitlab-runner executable] ********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Setting Permissions for gitlab-runner executable path={{ gitlab_runner_executable }}, owner={{ ansible_user_id | string }}, group={{ ansible_user_gid | string }}, mode=+x] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (MacOS) Start GitLab Runner] *************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (MacOS) Start GitLab Runner _raw_params={{ gitlab_runner_executable }} start] *********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Arch) Set gitlab_runner_package_name] ***************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Arch) Set gitlab_runner_package_name gitlab_runner_package={{ gitlab_runner_package_name }}, gitlab_runner_package_state=latest] *****************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Arch) Install GitLab Runner] ************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Arch) Install GitLab Runner name={{ gitlab_runner_package }}, state={{ gitlab_runner_package_state }}] *******************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists] ******************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Ensure /etc/systemd/system/gitlab-runner.service.d/ exists path=/etc/systemd/system/gitlab-runner.service.d, state=directory, owner=root, group=root, mode=493] ***********************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add reload command to GitLab Runner system service] **************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add reload command to GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/exec-reload.conf, content=[Service]
+ExecReload=/bin/kill -HUP $MAINPID
+] ************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Configure graceful stop for GitLab Runner system service] ********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Configure graceful stop for GitLab Runner system service dest=/etc/systemd/system/gitlab-runner.service.d/kill.conf, content=[Service]
+TimeoutStopSec={{ gitlab_runner_timeout_stop_seconds }}
+KillSignal=SIGQUIT
+] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Force systemd to reread configs] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Force systemd to reread configs daemon_reload=True] ***********************************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Unix) List configured runners] **********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : (Unix) List configured runners _raw_params={{ gitlab_runner_executable }} list] *******************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : (Unix) Check runner is registered] *******************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : (Unix) Check runner is registered _raw_params={{ gitlab_runner_executable }} verify] **************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : (Unix) Register GitLab Runner] ***********************************************************************************************************************************
-included: /home/user/devops/diplom/ansible/roles/runner/tasks/register-runner.yml for runner.ovirt.ru => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []})
+TASK [runner : (Unix) Register GitLab Runner _raw_params=register-runner.yml] ************************************************************************************************************************
+included: /home/gny/rep/diplom-my/scripts/ansible/roles/runner/tasks/register-runner.yml for runner.golubevny.site => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []})
 
-TASK [runner : remove config.toml file] *****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : remove config.toml file path={{ gitlab_runner_config_file }}, state=absent] ***********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Create .gitlab-runner dir] ***************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Create .gitlab-runner dir path={{ gitlab_runner_config_file_location }}, state=directory, mode=0700] **********************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Ensure config.toml exists] ***************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Ensure config.toml exists path={{ gitlab_runner_config_file }}, state=touch, modification_time=preserve, access_time=preserve] ********************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : Construct the runner command without secrets] ********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Construct the runner command without secrets command={{ gitlab_runner_executable }} register --non-interactive --url '{{ gitlab_runner.url|default(gitlab_runner_coordinator_url) }}' --description '{{ gitlab_runner.name|default(ansible_hostname+"-"+gitlab_runner_index|string) }}' --tag-list '{{ gitlab_runner.tags|default([]) | join(",") }}' {% if gitlab_runner.clone_url|default(false) %} --clone-url "{{ gitlab_runner.clone_url }}" {% endif %} {% if gitlab_runner.run_untagged|default(true) %} --run-untagged {% endif %} {% if gitlab_runner.protected|default(false) %} --access-level="ref_protected" {% endif %} --executor '{{ gitlab_runner.executor|default("shell") }}' {% if gitlab_runner.shell is defined %} --shell '{{ gitlab_runner.shell }}' {% endif %} --limit '{{ gitlab_runner.concurrent_specific|default(0) }}' --output-limit '{{ gitlab_runner.output_limit|default(4096) }}' --locked='{{ gitlab_runner.locked|default(false) }}' {% for env_var in gitlab_runner.env_vars|default([]) %} --env '{{ env_var }}' {% endfor %} {% if gitlab_runner.pre_clone_script|default(false) %} --pre-clone-script "{{ gitlab_runner.pre_clone_script }}" {% endif %} {% if gitlab_runner.pre_build_script|default(false) %} --pre-build-script "{{ gitlab_runner.pre_build_script }}" {% endif %} {% if gitlab_runner.tls_ca_file|default(false) %} --tls-ca-file "{{ gitlab_runner.tls_ca_file }}" {% endif %} {% if gitlab_runner.post_build_script|default(false) %} --post-build-script "{{ gitlab_runner.post_build_script }}" {% endif %} --docker-image '{{ gitlab_runner.docker_image|default("alpine") }}' {% if gitlab_runner.docker_helper_image is defined %} --docker-helper-image "{{ gitlab_runner.docker_helper_image }}" {% endif %} {% if gitlab_runner.docker_privileged|default(false) %} --docker-privileged {% endif %} {% if gitlab_runner.docker_wait_for_services_timeout|default(false) %} --docker-wait-for-services-timeout '{{ gitlab_runner.docker_wait_for_services_timeout|default(30) }}' {% endif %} {% if gitlab_runner.docker_tlsverify|default(false) %} --docker-tlsverify '{{ gitlab_runner.docker_tlsverify|default("true") }}' {% endif %} {% if gitlab_runner.docker_disable_cache|default(false) %} --docker-disable-cache '{{ gitlab_runner.docker_disable_cache|default("false") }}' {% endif %} {% if gitlab_runner.docker_dns|default(false) %} --docker-dns '{{ gitlab_runner.docker_dns|default("1.1.1.1") }}' {% endif %} {% if gitlab_runner.docker_dns_search|default(false) %} --docker-dns-search '{{ gitlab_runner.docker_dns_search|default([]) }}' {% endif %} {% if gitlab_runner.docker_disable_cache|default(false) %} --docker-disable-cache {% endif %} {% if gitlab_runner.docker_oom_kill_disable|default(false) %} --docker-oom-kill-disable '{{ gitlab_runner.docker_oom_kill_disable|default("false") }}' {% endif %} {% for policy in gitlab_runner.docker_pull_policy|default([]) %} --docker-pull-policy "{{ policy }}" {% endfor %} {% for volume in gitlab_runner.docker_volumes|default([]) %} --docker-volumes "{{ volume }}" {% endfor %} {% for device in gitlab_runner.docker_devices|default([]) %} --docker-devices "{{ device }}" {% endfor %} --ssh-user '{{ gitlab_runner.ssh_user|default("") }}' --ssh-host '{{ gitlab_runner.ssh_host|default("") }}' --ssh-port '{{ gitlab_runner.ssh_port|default("") }}' --ssh-identity-file '{{ gitlab_runner.ssh_identity_file|default("") }}' {% if gitlab_runner.executor == "virtualbox" and gitlab_runner.virtualbox_base_name %}
+    --virtualbox-base-name '{{ gitlab_runner.virtualbox_base_name }}'
+    --virtualbox-base-snapshot '{{ gitlab_runner.virtualbox_base_snapshot|default("") }}'
+    --virtualbox-base-folder '{{ gitlab_runner.virtualbox_base_folder|default("") }}'
+    --virtualbox-disable-snapshots='{{ gitlab_runner.virtualbox_disable_snapshots|default(false) }}'
+{% endif %} {% if gitlab_runner.cache_type is defined %} --cache-type '{{ gitlab_runner.cache_type }}' {% endif %} {% if gitlab_runner.cache_shared|default(false) %} --cache-shared {% endif %} {% if gitlab_runner.cache_path is defined %} --cache-path '{{ gitlab_runner.cache_path }}' {% endif %} {% if gitlab_runner.cache_s3_server_address is defined %} --cache-s3-server-address '{{ gitlab_runner.cache_s3_server_address }}' {% if gitlab_runner.cache_s3_access_key is defined %} --cache-s3-access-key '{{ gitlab_runner.cache_s3_access_key }}' {% endif %} {% endif %} {% if gitlab_runner.cache_s3_bucket_name is defined %} --cache-s3-bucket-name '{{ gitlab_runner.cache_s3_bucket_name }}' {% endif %} {% if gitlab_runner.cache_s3_bucket_location is defined %} --cache-s3-bucket-location '{{ gitlab_runner.cache_s3_bucket_location }}' {% endif %} {% if gitlab_runner.builds_dir|default(false) %} --builds-dir '{{ gitlab_runner.builds_dir }}' {% endif %} {% if gitlab_runner.custom_build_dir_enabled|default(false) %} --custom_build_dir-enabled '{{ gitlab_runner.custom_build_dir_enabled }}' {% endif %} {% if gitlab_runner.cache_dir|default(false) %} --cache-dir '{{ gitlab_runner.cache_dir }}' {% endif %} {% if gitlab_runner.cache_s3_insecure|default(false) %} --cache-s3-insecure {% endif %} {% if gitlab_runner.extra_registration_option is defined %} {{ gitlab_runner.extra_registration_option }} {% endif %}
+] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : Register runner to GitLab] ***************************************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Register runner to GitLab] ************************************************************************************************************************************************************
+changed: [runner.golubevny.site]
 
-TASK [runner : Create .gitlab-runner dir] ***************************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Create .gitlab-runner dir path={{ gitlab_runner_config_file_location }}, state=directory, mode=0700] **********************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Ensure config.toml exists] ***************************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Ensure config.toml exists path={{ gitlab_runner_config_file }}, state=touch, modification_time=preserve, access_time=preserve] ********************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Set concurrent option] *******************************************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Set concurrent option dest={{ gitlab_runner_config_file }}, regexp=^(\s*)concurrent =, line=\1concurrent = {{ gitlab_runner_concurrent }}, state=present, backrefs=True] **************
+changed: [runner.golubevny.site]
 
-TASK [runner : Add listen_address to config] ************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^listen_address =, line=listen_address = "{{ gitlab_runner_listen_address }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add log_format to config] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add log_format to config dest={{ gitlab_runner_config_file }}, regexp=^log_format =, line=log_format = "{{ gitlab_runner_log_format|default("runner") }}", insertbefore=BOF, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add sentry dsn to config] ****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : Add sentry dsn to config dest={{ gitlab_runner_config_file }}, regexp=^sentry_dsn =, line=sentry_dsn = "{{ gitlab_runner_sentry_dsn }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : Add session server listen_address to config] *********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Add session server listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^(\s+)listen_address =, line=  listen_address = "{{ gitlab_runner_session_server_listen_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_listen_address | length > 0 else 'absent' }}] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : Add session server advertise_address to config] ******************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Add session server advertise_address to config dest={{ gitlab_runner_config_file }}, regexp=^\s*advertise_address =, line=  advertise_address = "{{ gitlab_runner_session_server_advertise_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_advertise_address | length > 0 else 'absent' }}] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : Add session server session_timeout to config] ********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Add session server session_timeout to config dest={{ gitlab_runner_config_file }}, regexp=^\s*session_timeout =, line=  session_timeout = {{ gitlab_runner_session_server_session_timeout }}, insertafter=^\s*\[session_server\], state=present] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : Get existing config.toml] ****************************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Get existing config.toml src={{ gitlab_runner_config_file }}] *************************************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Get pre-existing runner configs] *********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Get pre-existing runner configs runner_configs={{ (runner_config_file['content'] | b64decode).split('[[runners]]
+') }}] ****************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Create temporary directory] **************************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : Create temporary directory state=directory, suffix=gitlab-runner-config] **************************************************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : Write config section for each runner] ****************************************************************************************************************************
-included: /home/user/devops/diplom/ansible/roles/runner/tasks/config-runner.yml for runner.ovirt.ru => (item=concurrent = 4
+TASK [runner : Write config section for each runner _raw_params=config-runner.yml] *******************************************************************************************************************
+included: /home/gny/rep/diplom-my/scripts/ansible/roles/runner/tasks/config-runner.yml for runner.golubevny.site => (item=concurrent = 4
 check_interval = 0
 
 [session_server]
   session_timeout = 1800
 
 )
-included: /home/user/devops/diplom/ansible/roles/runner/tasks/config-runner.yml for runner.ovirt.ru => (item=  name = "runner"
+included: /home/gny/rep/diplom-my/scripts/ansible/roles/runner/tasks/config-runner.yml for runner.golubevny.site => (item=  name = "runner"
   output_limit = 4096
-  url = "http://gitlab.ovirt.ru"
+  url = "http://gitlab.golubevny.site"
   id = 1
-  token = "NCLVMDVz54TZmxQCxZ1U"
-  token_obtained_at = 2022-09-09T22:12:43Z
+  token = "2JR6MHHet7Tw9V_oVyXv"
+  token_obtained_at = 2022-10-22T14:49:32Z
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   [runners.custom_build_dir]
@@ -2995,314 +1288,314 @@ included: /home/user/devops/diplom/ansible/roles/runner/tasks/config-runner.yml 
     [runners.cache.azure]
 )
 
-TASK [runner : conf[1/2]: Create temporary file] ********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[1/2]: Create temporary file state=file, path={{ temp_runner_config_dir.path }}, prefix=gitlab-runner.{{ runner_config_index }}.] *************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[1/2]: Isolate runner configuration] *************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[1/2]: Isolate runner configuration dest={{ temp_runner_config.path }}, content={{ runner_config }}] ******************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : include_tasks] ***************************************************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
+TASK [runner : include_tasks _raw_params=update-config-runner.yml] ***********************************************************************************************************************************
+skipping: [runner.golubevny.site] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
 
-TASK [runner : conf[1/2]: Remove runner config] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
+TASK [runner : conf[1/2]: Remove runner config path={{ temp_runner_config.path }}, state=absent] *****************************************************************************************************
+skipping: [runner.golubevny.site] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
 
-TASK [runner : conf[2/2]: Create temporary file] ********************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: Create temporary file state=file, path={{ temp_runner_config_dir.path }}, prefix=gitlab-runner.{{ runner_config_index }}.] *************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: Isolate runner configuration] *************************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: Isolate runner configuration dest={{ temp_runner_config.path }}, content={{ runner_config }}] ******************************************************************************
+ok: [runner.golubevny.site]
 
-TASK [runner : include_tasks] ***************************************************************************************************************************************************
-included: /home/user/devops/diplom/ansible/roles/runner/tasks/update-config-runner.yml for runner.ovirt.ru => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []})
+TASK [runner : include_tasks _raw_params=update-config-runner.yml] ***********************************************************************************************************************************
+included: /home/gny/rep/diplom-my/scripts/ansible/roles/runner/tasks/update-config-runner.yml for runner.golubevny.site => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []})
 
-TASK [runner : conf[2/2]: runner[1/1]: Set concurrent limit option] *************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set concurrent limit option dest={{ temp_runner_config.path }}, regexp=^\s*limit =, line=  limit = {{ gitlab_runner.concurrent_specific|default(0) }}, state=present, insertafter=^\s*name =, backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set coordinator URL] *********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set coordinator URL dest={{ temp_runner_config.path }}, regexp=^\s*url =, line=  url = {{ gitlab_runner.url|default(gitlab_runner_coordinator_url) | to_json }}, state=present, insertafter=^\s*limit =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set clone URL] ***************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set clone URL dest={{ temp_runner_config.path }}, regexp=^\s*clone_url =, line=  clone_url = {{ gitlab_runner.clone_url | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set environment option] ******************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set environment option dest={{ temp_runner_config.path }}, regexp=^\s*environment =, line=  environment = {{ gitlab_runner.env_vars|default([]) | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set pre_clone_script] ********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set pre_clone_script dest={{ temp_runner_config.path }}, regexp=^\s*pre_clone_script =, line=  pre_clone_script = {{ gitlab_runner.pre_clone_script | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set pre_build_script] ********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set pre_build_script dest={{ temp_runner_config.path }}, regexp=^\s*pre_build_script =, line=  pre_build_script = {{ gitlab_runner.pre_build_script | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set tls_ca_file] *************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set tls_ca_file dest={{ temp_runner_config.path }}, regexp=^\s*tls-ca-file =, line=  tls-ca-file = {{ gitlab_runner.tls_ca_file | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set post_build_script] *******************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set post_build_script dest={{ temp_runner_config.path }}, regexp=^\s*post_build_script =, line=  post_build_script = {{ gitlab_runner.post_build_script | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set runner executor option] **************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set runner executor option dest={{ temp_runner_config.path }}, regexp=^\s*executor =, line=  executor = {{ gitlab_runner.executor|default("shell") | to_json }}, state=present, insertafter=^\s*url =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set runner shell option] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set runner shell option dest={{ temp_runner_config.path }}, regexp=^\s*shell =, line=  shell = {{ gitlab_runner.shell|default("") | to_json }}, state={{ 'present' if gitlab_runner.shell is defined else 'absent' }}, insertafter=^\s*executor =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set runner executor section] *************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set runner executor section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.{{ gitlab_runner.executor|default("shell") }}\], line=  [runners.{{ gitlab_runner.executor|replace("docker+machine","machine")|default("shell") }}], state={{ 'absent' if (gitlab_runner.executor|default('shell')) == 'shell' else 'present' }}, insertafter=^\s*executor =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set output_limit option] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set output_limit option dest={{ temp_runner_config.path }}, regexp=^\s*output_limit =, line=  output_limit = {{ gitlab_runner.output_limit|default(4096) }}, state=present, insertafter=^\s*executor =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set runner docker image option] **********************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set runner docker image option dest={{ temp_runner_config.path }}, regexp=^\s*image =, line=    image = {{ gitlab_runner.docker_image|default("") | to_json }}, state={{ 'present' if gitlab_runner.docker_image is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker helper image option] **********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker helper image option dest={{ temp_runner_config.path }}, regexp=^\s*helper_image =, line=    helper_image = {{ gitlab_runner.docker_helper_image|default("") | to_json }}, state={{ 'present' if gitlab_runner.docker_helper_image is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker privileged option] ************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker privileged option dest={{ temp_runner_config.path }}, regexp=^\s*privileged =, line=    privileged = {{ gitlab_runner.docker_privileged|default(false) | lower }}, state={{ 'present' if gitlab_runner.docker_privileged is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker wait_for_services_timeout option] *********************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker wait_for_services_timeout option dest={{ temp_runner_config.path }}, regexp=^\s*wait_for_services_timeout =, line=    wait_for_services_timeout = {{ gitlab_runner.docker_wait_for_services_timeout|default(30) }}, state={{ 'present' if gitlab_runner.docker_wait_for_services_timeout is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker tlsverify option] *************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker tlsverify option dest={{ temp_runner_config.path }}, regexp=^\s*tls_verify =, line=    tls_verify = {{ gitlab_runner.docker_tlsverify|default(false) | lower }}, state={{ 'present' if gitlab_runner.docker_tlsverify is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker shm_size option] **************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker shm_size option dest={{ temp_runner_config.path }}, regexp=^\s*shm_size =, line=    shm_size = {{ gitlab_runner.docker_shm_size|default(false) | lower }}, state={{ 'present' if gitlab_runner.docker_shm_size is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker disable_cache option] *********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker disable_cache option dest={{ temp_runner_config.path }}, regexp=^\s*disable_cache =, line=    disable_cache = {{ gitlab_runner.docker_disable_cache|default(false) | lower }}, state={{ 'present' if gitlab_runner.docker_disable_cache is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker DNS option] *******************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker DNS option dest={{ temp_runner_config.path }}, regexp=^\s*dns =, line=    dns = {{ gitlab_runner.docker_dns|default(false) | to_json }}, state={{ 'present' if gitlab_runner.docker_dns is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker DNS search option] ************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker DNS search option dest={{ temp_runner_config.path }}, regexp=^\s*dns_search =, line=    dns_search = {{ gitlab_runner.docker_dns_search|default(false) | to_json }}, state={{ 'present' if gitlab_runner.docker_dns_search is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker pull_policy option] ***********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker pull_policy option dest={{ temp_runner_config.path }}, regexp=^\s*pull_policy =, line=    pull_policy = {{ gitlab_runner.docker_pull_policy|default([])|to_json }}, state={{ 'present' if gitlab_runner.docker_pull_policy is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker volumes option] ***************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker volumes option dest={{ temp_runner_config.path }}, regexp=^\s*volumes =, line=    volumes = {{ gitlab_runner.docker_volumes|default([])|to_json }}, state={{ 'present' if gitlab_runner.docker_volumes is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker devices option] ***************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker devices option dest={{ temp_runner_config.path }}, regexp=^\s*devices =, line=    devices = {{ gitlab_runner.docker_devices|default([])|to_json }}, state={{ 'present' if gitlab_runner.docker_devices is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set runner docker network option] ********************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set runner docker network option dest={{ temp_runner_config.path }}, regexp=^\s*network_mode =, line=    network_mode = {{ gitlab_runner.docker_network_mode|default("bridge") | to_json }}, state={{ 'present' if gitlab_runner.docker_network_mode is defined else 'absent' }}, insertafter=^\s*\[runners\.docker\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set custom_build_dir section] ************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set custom_build_dir section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.custom_build_dir\], line=  [runners.custom_build_dir], state={{ 'present' if gitlab_runner.custom_build_dir_enabled is defined else 'absent' }}, insertafter=EOF, backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set docker custom_build_dir-enabled option] **********************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set docker custom_build_dir-enabled option dest={{ temp_runner_config.path }}, regexp=^\s*enabled =, line=    enabled = {{ gitlab_runner.custom_build_dir_enabled|default(false) | lower }}, state={{ 'present' if gitlab_runner.custom_build_dir_enabled is defined else 'absent' }}, insertafter=^\s*\[runners\.custom_build_dir\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache section] ***********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.cache\], line=  [runners.cache], state=present, insertafter=EOF, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 section] ********************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.cache\.s3\], line=    [runners.cache.s3], state={{ 'present' if gitlab_runner.cache_type is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs section] *******************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.cache\.gcs\], line=    [runners.cache.gcs], state={{ 'present' if gitlab_runner.cache_gcs_bucket_name is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache azure section] *****************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache azure section dest={{ temp_runner_config.path }}, regexp=^\s*\[runners\.cache\.azure\], line=    [runners.cache.azure], state={{ 'present' if gitlab_runner.cache_type is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache type option] *******************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache type option dest={{ temp_runner_config.path }}, regexp=^\s*Type =, line=    Type = {{ gitlab_runner.cache_type|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_type is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache path option] *******************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache path option dest={{ temp_runner_config.path }}, regexp=^\s*Path =, line=    Path = {{ gitlab_runner.cache_path|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_path is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache shared option] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache shared option dest={{ temp_runner_config.path }}, regexp=^\s*Shared =, line=    Shared = {{ gitlab_runner.cache_shared|default("") | lower }}, state={{ 'present' if gitlab_runner.cache_shared is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 server addresss] ************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 server addresss dest={{ temp_runner_config.path }}, regexp=^\s*ServerAddress =, line=      ServerAddress = {{ gitlab_runner.cache_s3_server_address|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_s3_server_address is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 access key] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 access key dest={{ temp_runner_config.path }}, regexp=^\s*AccessKey =, line=      AccessKey = {{ gitlab_runner.cache_s3_access_key|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_s3_access_key is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 secret key] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 secret key dest={{ temp_runner_config.path }}, regexp=^\s*SecretKey =, line=      SecretKey = {{ gitlab_runner.cache_s3_secret_key|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_s3_secret_key is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 bucket name option] *********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 bucket name option dest={{ temp_runner_config.path }}, regexp=^\s*BucketName =, line=      BucketName = {{ gitlab_runner.cache_s3_bucket_name|default("")  | to_json }}, state={{ 'present' if gitlab_runner.cache_s3_bucket_name is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 bucket location option] *****************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 bucket location option dest={{ temp_runner_config.path }}, regexp=^\s*BucketLocation =, line=      BucketLocation = {{ gitlab_runner.cache_s3_bucket_location|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_s3_bucket_location is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 insecure option] ************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache s3 insecure option dest={{ temp_runner_config.path }}, regexp=^\s*Insecure =, line=      Insecure = {{ gitlab_runner.cache_s3_insecure|default("") | lower }}, state={{ 'present' if gitlab_runner.cache_s3_insecure is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.s3\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs bucket name] ***************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs bucket name dest={{ temp_runner_config.path }}, regexp=^\s*BucketName =, line=      BucketName = {{ gitlab_runner.cache_gcs_bucket_name|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_gcs_bucket_name is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.gcs\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs credentials file] **********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs credentials file dest={{ temp_runner_config.path }}, regexp=^\s*CredentialsFile =, line=      CredentialsFile = {{ gitlab_runner.cache_gcs_credentials_file|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_gcs_credentials_file is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.gcs\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs access id] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs access id dest={{ temp_runner_config.path }}, regexp=^\s*AccessID =, line=      AccessID = {{ gitlab_runner.cache_gcs_access_id|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_gcs_access_id is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.gcs\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs private key] ***************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache gcs private key dest={{ temp_runner_config.path }}, regexp=^\s*PrivateKey =, line=      PrivateKey = {{ gitlab_runner.cache_gcs_private_key|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_gcs_private_key is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.gcs\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache azure account name] ************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache azure account name dest={{ temp_runner_config.path }}, regexp=^\s*AccountName =, line=      AccountName = {{ gitlab_runner.cache_azure_account_name|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_azure_account_name is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.azure\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache azure account key] *************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache azure account key dest={{ temp_runner_config.path }}, regexp=^\s*AccountKey =, line=      AccountKey = {{ gitlab_runner.cache_azure_account_key|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_azure_account_key is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.azure\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache azure container name] **********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache azure container name dest={{ temp_runner_config.path }}, regexp=^\s*ContainerName =, line=      ContainerName = {{ gitlab_runner.cache_azure_container_name|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_azure_container_name is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.azure\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache azure storage domain] **********************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache azure storage domain dest={{ temp_runner_config.path }}, regexp=^\s*StorageDomain =, line=      StorageDomain = {{ gitlab_runner.cache_azure_storage_domain|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_azure_storage_domain is defined else 'absent' }}, insertafter=^\s*\[runners\.cache\.azure\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set ssh user option] *********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set ssh user option dest={{ temp_runner_config.path }}, regexp=^\s*user =, line=  user = {{ gitlab_runner.ssh_user|default("") | to_json }}, state={{ 'present' if gitlab_runner.ssh_user is defined else 'absent' }}, insertafter=^\s*\[runners\.ssh\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set ssh host option] *********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set ssh host option dest={{ temp_runner_config.path }}, regexp=^\s*host =, line=  host = {{ gitlab_runner.ssh_host|default("") | to_json }}, state={{ 'present' if gitlab_runner.ssh_host is defined else 'absent' }}, insertafter=^\s*\[runners\.ssh\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set ssh port option] *********************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set ssh port option dest={{ temp_runner_config.path }}, regexp=^\s*port =, line=  port = "{{ gitlab_runner.ssh_port|default("") | to_json }}", state={{ 'present' if gitlab_runner.ssh_port is defined else 'absent' }}, insertafter=^\s*\[runners\.ssh\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set ssh password option] *****************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set ssh password option dest={{ temp_runner_config.path }}, regexp=^\s*password =, line=  password = {{ gitlab_runner.ssh_password|default("") | to_json }}, state={{ 'present' if gitlab_runner.ssh_password is defined else 'absent' }}, insertafter=^\s*\[runners\.ssh\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set ssh identity file option] ************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set ssh identity file option dest={{ temp_runner_config.path }}, regexp=^\s*identity_file =, line=  identity_file = {{ gitlab_runner.ssh_identity_file|default("") | to_json }}, state={{ 'present' if gitlab_runner.ssh_identity_file is defined else 'absent' }}, insertafter=^\s*\[runners\.ssh\], backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base name option] *********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base name option dest={{ temp_runner_config.path }}, regexp=^\s*base_name =, line=    base_name = {{ gitlab_runner.virtualbox_base_name | to_json }}, state={{ 'present' if gitlab_runner.virtualbox_base_name is defined else 'absent' }}, insertafter=^\s*\[runners\.virtualbox\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base snapshot option] *****************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base snapshot option dest={{ temp_runner_config.path }}, regexp=^\s*base_snapshot =, line=    base_snapshot = {{ gitlab_runner.virtualbox_base_snapshot | to_json }}, state={{ 'present' if gitlab_runner.virtualbox_base_snapshot is defined else 'absent' }}, insertafter=^\s*\[runners\.virtualbox\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base folder option] *******************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox base folder option dest={{ temp_runner_config.path }}, regexp=^\s*base_folder =, line=    base_folder = {{ gitlab_runner.virtualbox_base_folder | to_json }}, state={{ 'present' if gitlab_runner.virtualbox_base_folder is defined else 'absent' }}, insertafter=^\s*\[runners\.virtualbox\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox disable snapshots option] *************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set virtualbox disable snapshots option dest={{ temp_runner_config.path }}, regexp=^\s*disable_snapshots =, line=    disable_snapshots = {{ gitlab_runner.virtualbox_disable_snapshots|default(false) | to_json }}, state={{ 'present' if gitlab_runner.virtualbox_disable_snapshots is defined else 'absent' }}, insertafter=^\s*\[runners\.virtualbox\], backrefs=False] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set builds dir file option] **************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set builds dir file option dest={{ temp_runner_config.path }}, regexp=^\s*builds_dir =, line=  builds_dir = {{ gitlab_runner.builds_dir|default("") | to_json }}, state={{ 'present' if gitlab_runner.builds_dir is defined else 'absent' }}, insertafter=^\s*executor =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Set cache dir file option] ***************************************************************************************************************
-ok: [runner.ovirt.ru]
+TASK [runner : conf[2/2]: runner[1/1]: Set cache dir file option dest={{ temp_runner_config.path }}, regexp=^\s*cache_dir =, line=  cache_dir = {{ gitlab_runner.cache_dir|default("") | to_json }}, state={{ 'present' if gitlab_runner.cache_dir is defined else 'absent' }}, insertafter=^\s*executor =, backrefs=False] ***
+ok: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: runner[1/1]: Ensure directory permissions] ************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item=) 
-skipping: [runner.ovirt.ru] => (item=) 
+TASK [runner : conf[2/2]: runner[1/1]: Ensure directory permissions dest={{ item }}, state=directory, owner={{ gitlab_runner_runtime_owner|default(omit) }}, group={{ gitlab_runner_runtime_group|default(omit) }}, mode=504, modification_time=preserve, access_time=preserve, recurse=True] ***
+skipping: [runner.golubevny.site] => (item=) 
+skipping: [runner.golubevny.site] => (item=) 
 
-TASK [runner : conf[2/2]: runner[1/1]: Ensure directory access test] ************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item=) 
-skipping: [runner.ovirt.ru] => (item=) 
+TASK [runner : conf[2/2]: runner[1/1]: Ensure directory access test _raw_params=/usr/bin/test -r {{ item }}] *****************************************************************************************
+skipping: [runner.golubevny.site] => (item=) 
+skipping: [runner.golubevny.site] => (item=) 
 
-TASK [runner : conf[2/2]: runner[1/1]: Ensure directory access fail on error] ***************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'item': '', 'ansible_loop_var': 'item'}) 
-skipping: [runner.ovirt.ru] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'item': '', 'ansible_loop_var': 'item'}) 
+TASK [runner : conf[2/2]: runner[1/1]: Ensure directory access fail on error msg=Error: user gitlab-runner failed to test access to {{ item.item }}. Check parent folder(s) permissions] *************
+skipping: [runner.golubevny.site] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'item': '', 'ansible_loop_var': 'item'}) 
+skipping: [runner.golubevny.site] => (item={'changed': False, 'skipped': True, 'skip_reason': 'Conditional result was False', 'item': '', 'ansible_loop_var': 'item'}) 
 
-TASK [runner : include_tasks] ***************************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : include_tasks _raw_params=section-config-runner.yml] **********************************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : conf[2/2]: Remove runner config] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
+TASK [runner : conf[2/2]: Remove runner config path={{ temp_runner_config.path }}, state=absent] *****************************************************************************************************
+skipping: [runner.golubevny.site] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
 
-TASK [runner : Assemble new config.toml] ****************************************************************************************************************************************
-changed: [runner.ovirt.ru]
+TASK [runner : Assemble new config.toml src={{ temp_runner_config_dir.path }}, dest={{ gitlab_runner_config_file }}, delimiter=[[runners]]\n, backup=True, validate={{ gitlab_runner_executable }} verify -c %s, mode=384] ***
+changed: [runner.golubevny.site]
 
-TASK [runner : (Windows) Check gitlab-runner executable exists] *****************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Check gitlab-runner executable exists path={{ gitlab_runner_executable }}] **************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Set fact -> gitlab_runner_exists] **********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Set fact -> gitlab_runner_exists gitlab_runner_exists={{ gitlab_runner_exists.stat.exists }}] *******************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Get existing version] **********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Get existing version _raw_params={{ gitlab_runner_executable }} --version | Select-String 'Version:' -CaseSensitive | %{ $_.Line.Split(' ')[-1].Trim(); }] ******************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Set fact -> gitlab_runner_existing_version] ************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Set fact -> gitlab_runner_existing_version gitlab_runner_existing_version={{ existing_version_shell.stdout | trim if existing_version_shell.rc == 0 else '0' }}] ************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Ensure install directory exists] ***********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Ensure install directory exists path={{ gitlab_runner_install_directory }}, state=directory] ********************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Download GitLab Runner] ********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Download GitLab Runner url={{ gitlab_runner_download_url }}, dest={{ gitlab_runner_executable }}, force=True] ***************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Install GitLab Runner] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Install GitLab Runner chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} install] ***************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Install GitLab Runner] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Install GitLab Runner chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} install --user "{{ gitlab_runner_windows_service_user }}" --password "{{ gitlab_runner_windows_service_password }}"] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Make sure runner is stopped] ***************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Make sure runner is stopped _raw_params={{ gitlab_runner_executable }} stop] ************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Download GitLab Runner] ********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Download GitLab Runner url={{ gitlab_runner_download_url }}, dest={{ gitlab_runner_executable }}, force=True] ***************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) List configured runners] *******************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) List configured runners chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} list] ****************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Check runner is registered] ****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Check runner is registered chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} verify] ***********************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Register GitLab Runner] ********************************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
+TASK [runner : (Windows) Register GitLab Runner _raw_params=register-runner-windows.yml] *************************************************************************************************************
+skipping: [runner.golubevny.site] => (item={'name': 'runner', 'state': 'present', 'executor': 'shell', 'output_limit': 4096, 'concurrent_specific': '0', 'docker_image': '', 'tags': [], 'run_untagged': True, 'protected': False, 'docker_privileged': False, 'locked': 'false', 'docker_network_mode': 'bridge', 'env_vars': []}) 
 
-TASK [runner : (Windows) Create .gitlab-runner dir] *****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Create .gitlab-runner dir path={{ gitlab_runner_config_file_location }}, state=directory] ***********************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Ensure config.toml exists] *****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Ensure config.toml exists path={{ gitlab_runner_config_file }}, state=touch, modification_time=preserve, access_time=preserve] **********************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Set concurrent option] *********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Set concurrent option dest={{ gitlab_runner_config_file }}, regexp=^(\s*)concurrent =.*, line=$1concurrent = {{ gitlab_runner_concurrent }}, state=present, backrefs=True] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Add listen_address to config] **************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Add listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^listen_address =.*, line=listen_address = "{{ gitlab_runner_listen_address }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Add sentry dsn to config] ******************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Add sentry dsn to config dest={{ gitlab_runner_config_file }}, regexp=^sentry_dsn =.*, line=sentry_dsn = "{{ gitlab_runner_sentry_dsn }}", insertafter=\s*concurrent.*, state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Add session server listen_address to config] ***********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Add session server listen_address to config dest={{ gitlab_runner_config_file }}, regexp=^(\s+)listen_address =, line=  listen_address = "{{ gitlab_runner_session_server_listen_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_listen_address | length > 0 else 'absent' }}] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Add session server advertise_address to config] ********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Add session server advertise_address to config dest={{ gitlab_runner_config_file }}, regexp=^\s*advertise_address =, line=  advertise_address = "{{ gitlab_runner_session_server_advertise_address }}", insertafter=^\s*\[session_server\], state={{ 'present' if gitlab_runner_session_server_advertise_address | length > 0 else 'absent' }}] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Add session server session_timeout to config] **********************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Add session server session_timeout to config dest={{ gitlab_runner_config_file }}, regexp=^\s*session_timeout =, line=  session_timeout = {{ gitlab_runner_session_server_session_timeout }}, insertafter=^\s*\[session_server\], state=present] ***
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Get existing config.toml] ******************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Get existing config.toml src={{ gitlab_runner_config_file }}] ***************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Get pre-existing global config] ************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Get pre-existing global config runner_global_config={{ (runner_config_file['content'] | b64decode).split('[[runners]]')[0] }}] **********************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Get pre-existing runner configs] ***********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Get pre-existing runner configs runner_configs={{ (runner_config_file['content'] | b64decode).split('[[runners]]')[1:] }}] **************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Create temporary directory] ****************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Create temporary directory state=directory, suffix=gitlab-runner-config] ****************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Write config section for each runner] ******************************************************************************************************************
-skipping: [runner.ovirt.ru] => (item=concurrent = 4
+TASK [runner : (Windows) Write config section for each runner _raw_params=config-runner-windows.yml] *************************************************************************************************
+skipping: [runner.golubevny.site] => (item=concurrent = 4
 check_interval = 0
 
 [session_server]
   session_timeout = 1800
 
 ) 
-skipping: [runner.ovirt.ru] => (item=  name = "runner"
+skipping: [runner.golubevny.site] => (item=  name = "runner"
   output_limit = 4096
-  url = "http://gitlab.ovirt.ru"
+  url = "http://gitlab.golubevny.site"
   id = 1
-  token = "NCLVMDVz54TZmxQCxZ1U"
-  token_obtained_at = 2022-09-09T22:12:43Z
+  token = "2JR6MHHet7Tw9V_oVyXv"
+  token_obtained_at = 2022-10-22T14:49:32Z
   token_expires_at = 0001-01-01T00:00:00Z
   executor = "shell"
   [runners.custom_build_dir]
@@ -3312,35 +1605,35 @@ skipping: [runner.ovirt.ru] => (item=  name = "runner"
     [runners.cache.azure]
 ) 
 
-TASK [runner : (Windows) Create temporary file config.toml] *********************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Create temporary file config.toml state=file, suffix=temp] ******************************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Write global config to file] ***************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Write global config to file insertbefore=BOF, path={{ config_toml_temp.path }}, line={{ runner_global_config }}] ************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Create temporary file runners-config.toml] *************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Create temporary file runners-config.toml state=file, suffix=temp] **********************************************************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Assemble runners files in config dir] ******************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Assemble runners files in config dir chdir={{ temp_runner_config_dir.path }}, _raw_params=dir -rec | gc | out-file "{{ runners_config_toml_temp.path }}"] *******************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Assemble new config.toml] ******************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Assemble new config.toml _raw_params=gc "{{ config_toml_temp.path }}","{{ runners_config_toml_temp.path }}" | Set-Content "{{ gitlab_runner_config_file }}"] ****************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Verify config] *****************************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Verify config chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} verify] ************************************************************
+skipping: [runner.golubevny.site]
 
-TASK [runner : (Windows) Start GitLab Runner] ***********************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+TASK [runner : (Windows) Start GitLab Runner chdir={{ gitlab_runner_config_file_location }}, _raw_params={{ gitlab_runner_executable }} start] *******************************************************
+skipping: [runner.golubevny.site]
 
-RUNNING HANDLER [runner : restart_gitlab_runner] ********************************************************************************************************************************
-changed: [runner.ovirt.ru]
+RUNNING HANDLER [runner : restart_gitlab_runner name=gitlab-runner, state={{ gitlab_runner_restart_state }}] *****************************************************************************************
+changed: [runner.golubevny.site]
 
-RUNNING HANDLER [runner : restart_gitlab_runner_macos] **************************************************************************************************************************
-skipping: [runner.ovirt.ru]
+RUNNING HANDLER [runner : restart_gitlab_runner_macos _raw_params={{ gitlab_runner_executable }} restart] ********************************************************************************************
+skipping: [runner.golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-runner.ovirt.ru            : ok=81   changed=19   unreachable=0    failed=0    skipped=111  rescued=0    ignored=0
+PLAY RECAP *******************************************************************************************************************************************************************************************
+runner.golubevny.site      : ok=81   changed=19   unreachable=0    failed=0    skipped=111  rescued=0    ignored=0 
 
 ```
 
@@ -3348,29 +1641,29 @@ runner.ovirt.ru            : ok=81   changed=19   unreachable=0    failed=0    s
 
 Проверяем что `runner` подключился к `gitlab`, смотрим `Settings` -> `CI/CD` -> `Runners`
 
-![31](img/img031.PNG)
+![31](pic/gitlab.runner.png)
 
 В `CI/CD` -> `Pipelines` видим что `pipeline` выполнился.
 
-![32](img/img032.PNG)
+![32](pic/gitlab.pipeline.passed.png)
 
-![33](img/img033.PNG)
+![33](pic/gitlab.pipelines.jobs.png)
 
 Теперь сделаем коммит (добавим файл `hello.txt`) в репозиторий и еще раз глянем на `Pipelines`
 
-![34](img/img034.PNG)
+![34](pic/gitlab.new_commit.png)
 
-![35](img/img035.PNG)
 
 Проверим `Pipelines`, видим что он выполнился
 
-![36](img/img036.PNG)
+![36](pic/gitlab.pipelines.new_commit.png)
 
-![37](img/img037.PNG)
+![37](pic/gitlab.pipelines.jobs.new_commit.png)
 
-И сам файл на мервере `wordpress`
+И сам файл на сервере `wordpress`:
 
-![38](img/img038.PNG)
+
+![38](pic/wordpress.hello.txt.png)
 ---
 
 ___
@@ -3410,7 +1703,7 @@ ___
 
 [https://github.com/cloudalchemy/ansible-node-exporter](https://github.com/cloudalchemy/ansible-node-exporter)
 
-Для разворачивания `Node Exporter` выполняем `ansible-playbook node_exporter.yml -i hosts`
+Для разворачивания `Node Exporter` выполняем `ansible-playbook node_exporter.yml`
 
 Разворачиваем везде, кроме сервера `gitlab`, т.к. там уже есть, он ставится вместе с `gitlab`ом.
 
@@ -3419,120 +1712,120 @@ ___
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook node_exporter.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook node_exporter.yml
 
-PLAY [app db01 db02 monitoring runner proxy] ************************************************************************************************************************************
+PLAY [app db01 db02 monitoring runner proxy] *********************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [db02.ovirt.ru]
-ok: [db01.ovirt.ru]
-ok: [app.ovirt.ru]
-ok: [runner.ovirt.ru]
-ok: [monitoring.ovirt.ru]
-ok: [ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [app.golubevny.site]
+ok: [runner.golubevny.site]
+ok: [db02.golubevny.site]
+ok: [db01.golubevny.site]
+ok: [golubevny.site]
+ok: [monitoring.golubevny.site]
 
-TASK [node_exporter : check if node exporter exist] *****************************************************************************************************************************
-ok: [db02.ovirt.ru]
-ok: [monitoring.ovirt.ru]
-ok: [runner.ovirt.ru]
-ok: [app.ovirt.ru]
-ok: [db01.ovirt.ru]
-ok: [ovirt.ru]
+TASK [node_exporter : check if node exporter exist path={{ node_exporter_bin }}] *********************************************************************************************************************
+ok: [app.golubevny.site]
+ok: [db01.golubevny.site]
+ok: [monitoring.golubevny.site]
+ok: [runner.golubevny.site]
+ok: [db02.golubevny.site]
+ok: [golubevny.site]
 
-TASK [node_exporter : Create the node_exporter group] ***************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : Create the node_exporter group name={{ node_exporter_group }}, state=present, system=True] *************************************************************************************
+changed: [app.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : Create the node_exporter user] ****************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
-changed: [db02.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : Create the node_exporter user name={{ node_exporter_user }}, groups={{ node_exporter_group }}, append=True, shell=/usr/sbin/nologin, system=True, create_home=False, home=/] ***
+changed: [app.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : Create node exporter config dir] **************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : Create node exporter config dir path={{ node_exporter_dir_conf }}, state=directory, owner={{ node_exporter_user }}, group={{ node_exporter_group }}] ***************************
+changed: [app.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : if node exporter exist get version] ***********************************************************************************************************************
-skipping: [app.ovirt.ru]
-skipping: [db01.ovirt.ru]
-skipping: [db02.ovirt.ru]
-skipping: [monitoring.ovirt.ru]
-skipping: [runner.ovirt.ru]
-skipping: [ovirt.ru]
+TASK [node_exporter : if node exporter exist get version _raw_params=cat /etc/systemd/system/node_exporter.service | grep Version | sed s/'.*Version '//g] *******************************************
+skipping: [app.golubevny.site]
+skipping: [db01.golubevny.site]
+skipping: [db02.golubevny.site]
+skipping: [monitoring.golubevny.site]
+skipping: [runner.golubevny.site]
+skipping: [golubevny.site]
 
-TASK [node_exporter : download and unzip node exporter if not exist] ************************************************************************************************************
-changed: [runner.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : download and unzip node exporter if not exist src=https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz, dest=/tmp/, remote_src=True, validate_certs=False] ***
+changed: [db02.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [app.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : move the binary to the final destination] *****************************************************************************************************************
-changed: [monitoring.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [db02.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : move the binary to the final destination src=/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter, dest={{ node_exporter_bin }}, owner={{ node_exporter_user }}, group={{ node_exporter_group }}, mode=493, remote_src=True] ***
+changed: [monitoring.golubevny.site]
+changed: [app.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : clean] ****************************************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : clean path=/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/, state=absent] ******************************************************************************************
+changed: [app.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : install service] ******************************************************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [ovirt.ru]
+TASK [node_exporter : install service src=node_exporter.service.j2, dest=/etc/systemd/system/node_exporter.service, owner=root, group=root, mode=493] ************************************************
+changed: [app.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : meta] *****************************************************************************************************************************************************
+TASK [node_exporter : meta _raw_params=flush_handlers] ***********************************************************************************************************************************************
 
-RUNNING HANDLER [node_exporter : reload_daemon_and_restart_node_exporter] *******************************************************************************************************
-changed: [db02.ovirt.ru]
-changed: [monitoring.ovirt.ru]
-changed: [db01.ovirt.ru]
-changed: [runner.ovirt.ru]
-changed: [app.ovirt.ru]
-changed: [ovirt.ru]
+RUNNING HANDLER [node_exporter : reload_daemon_and_restart_node_exporter name=node_exporter, state=restarted, daemon_reload=True, enabled=True] ******************************************************
+changed: [app.golubevny.site]
+changed: [runner.golubevny.site]
+changed: [db01.golubevny.site]
+changed: [monitoring.golubevny.site]
+changed: [db02.golubevny.site]
+changed: [golubevny.site]
 
-TASK [node_exporter : service always started] ***********************************************************************************************************************************
-ok: [db02.ovirt.ru]
-ok: [app.ovirt.ru]
-ok: [db01.ovirt.ru]
-ok: [monitoring.ovirt.ru]
-ok: [runner.ovirt.ru]
-ok: [ovirt.ru]
+TASK [node_exporter : service always started name=node_exporter, state=started, enabled=True] ********************************************************************************************************
+ok: [app.golubevny.site]
+ok: [db01.golubevny.site]
+ok: [db02.golubevny.site]
+ok: [runner.golubevny.site]
+ok: [monitoring.golubevny.site]
+ok: [golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-app.ovirt.ru               : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-db01.ovirt.ru              : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-db02.ovirt.ru              : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-monitoring.ovirt.ru        : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-ovirt.ru                   : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-runner.ovirt.ru            : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0 
+PLAY RECAP *******************************************************************************************************************************************************************************************
+app.golubevny.site         : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+db01.golubevny.site        : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+db02.golubevny.site        : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+golubevny.site             : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+monitoring.golubevny.site  : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+runner.golubevny.site      : ok=11   changed=8    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0
 ```
 
 </details>
 
-Для разворачивания `Alertmanager`, `Prometheus` и `Grafana` выполняем `ansible-playbook monitoring.yml -i hosts`
+Для разворачивания `Alertmanager`, `Prometheus` и `Grafana` выполняем `ansible-playbook monitoring.yml`
 
 Ставится `Prometheus` и подключаются метрики, шаблон `prometheus.yml.j2`
 
@@ -3545,249 +1838,262 @@ runner.ovirt.ru            : ok=11   changed=8    unreachable=0    failed=0    s
 
 ```bash
 
-user@user-ubuntu:~/devops/diplom/ansible$ ansible-playbook monitoring.yml -i hosts
+gny@gny-HP-Notebook:~/rep/diplom-my/scripts/ansible(main)$ ansible-playbook monitoring.yml
 
-PLAY [monitoring] ***************************************************************************************************************************************************************
+PLAY [monitoring] ************************************************************************************************************************************************************************************
 
-TASK [Gathering Facts] **********************************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [Gathering Facts ] ******************************************************************************************************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [monitoring : install python-firewall] *************************************************************************************************************************************
-skipping: [monitoring.ovirt.ru] => (item=python-firewall) 
+TASK [monitoring : install python-firewall name={{item}}, state=present] *****************************************************************************************************************************
+skipping: [monitoring.golubevny.site] => (item=python-firewall) 
 
-TASK [monitoring : Allow Ports] *************************************************************************************************************************************************
-skipping: [monitoring.ovirt.ru] => (item=9090/tcp) 
-skipping: [monitoring.ovirt.ru] => (item=9093/tcp) 
-skipping: [monitoring.ovirt.ru] => (item=9094/tcp) 
-skipping: [monitoring.ovirt.ru] => (item=9100/tcp) 
-skipping: [monitoring.ovirt.ru] => (item=9094/udp) 
+TASK [monitoring : Allow Ports port={{ item }}, permanent=True, state=enabled] ***********************************************************************************************************************
+skipping: [monitoring.golubevny.site] => (item=9090/tcp) 
+skipping: [monitoring.golubevny.site] => (item=9093/tcp) 
+skipping: [monitoring.golubevny.site] => (item=9094/tcp) 
+skipping: [monitoring.golubevny.site] => (item=9100/tcp) 
+skipping: [monitoring.golubevny.site] => (item=9094/udp) 
 
-TASK [monitoring : Disable SELinux] *********************************************************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [monitoring : Disable SELinux state=disabled] ***************************************************************************************************************************************************
+skipping: [monitoring.golubevny.site]
 
-TASK [monitoring : Stop SELinux] ************************************************************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [monitoring : Stop SELinux _raw_params=setenforce 0] ********************************************************************************************************************************************
+skipping: [monitoring.golubevny.site]
 
-TASK [monitoring : Allow TCP Ports] *********************************************************************************************************************************************
-ok: [monitoring.ovirt.ru] => (item=9090)
-ok: [monitoring.ovirt.ru] => (item=9093)
-ok: [monitoring.ovirt.ru] => (item=9094)
-ok: [monitoring.ovirt.ru] => (item=9100)
+TASK [monitoring : Allow TCP Ports chain=INPUT, rule_num=1, action=insert, protocol=tcp, jump=ACCEPT, destination_port={{ item }}] *******************************************************************
+changed: [monitoring.golubevny.site] => (item=9090)
+changed: [monitoring.golubevny.site] => (item=9093)
+changed: [monitoring.golubevny.site] => (item=9094)
+changed: [monitoring.golubevny.site] => (item=9100)
 
-TASK [monitoring : Allow UDP Ports] *********************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [monitoring : Allow UDP Ports chain=INPUT, rule_num=1, action=insert, protocol=udp, jump=ACCEPT, destination_port=9094] *************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Create the prometheus group] *********************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [monitoring : Create the prometheus group name={{ prometheus_group }}, state=present, system=True] **********************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Create User prometheus] **************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [monitoring : Create User prometheus name={{ prometheus_user }}, create_home=False, shell=/bin/false] *******************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Create directories for prometheus] ***************************************************************************************************************************
-ok: [monitoring.ovirt.ru] => (item=/tmp/prometheus)
-ok: [monitoring.ovirt.ru] => (item=/etc/prometheus)
-ok: [monitoring.ovirt.ru] => (item=/var/lib/prometheus)
+TASK [monitoring : Create directories for prometheus path={{ item }}, state=directory, owner={{ prometheus_user }}, group={{ prometheus_user }}] *****************************************************
+changed: [monitoring.golubevny.site] => (item=/tmp/prometheus)
+changed: [monitoring.golubevny.site] => (item=/etc/prometheus)
+changed: [monitoring.golubevny.site] => (item=/var/lib/prometheus)
 
-TASK [monitoring : Download And Unzipped Prometheus] ****************************************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [monitoring : Download And Unzipped Prometheus src=https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz, dest=/tmp/prometheus, creates=/tmp/prometheus/prometheus-{{ prometheus_version }}.linux-amd64, remote_src=True] ***
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Copy Bin Files From Unzipped to Prometheus] ******************************************************************************************************************
-ok: [monitoring.ovirt.ru] => (item=prometheus)
-ok: [monitoring.ovirt.ru] => (item=promtool)
+TASK [monitoring : Copy Bin Files From Unzipped to Prometheus src=/tmp/prometheus/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}, dest=/usr/local/bin/, remote_src=True, mode=preserve, owner={{ prometheus_user }}, group={{ prometheus_user }}] ***
+changed: [monitoring.golubevny.site] => (item=prometheus)
+changed: [monitoring.golubevny.site] => (item=promtool)
 
-TASK [monitoring : Copy Conf Files From Unzipped to Prometheus] *****************************************************************************************************************
-changed: [monitoring.ovirt.ru] => (item=console_libraries)
-changed: [monitoring.ovirt.ru] => (item=consoles)
+TASK [monitoring : Copy Conf Files From Unzipped to Prometheus src=/tmp/prometheus/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}, dest={{ prometheus_config_dir }}/, remote_src=True, mode=preserve, owner={{ prometheus_user }}, group={{ prometheus_user }}] ***
+changed: [monitoring.golubevny.site] => (item=console_libraries)
+changed: [monitoring.golubevny.site] => (item=consoles)
 
-TASK [monitoring : Create File for Prometheus Systemd] **************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Create File for Prometheus Systemd src=templates/prometheus.service.j2, dest=/etc/systemd/system/prometheus.service] **************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : copy config] *************************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : copy config src=templates/prometheus.yml.j2, dest={{ prometheus_config_dir }}/prometheus.yml] *************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : copy alert] **************************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : copy alert src=templates/rules.yml.j2, dest={{ prometheus_config_dir }}/rules.yml] ************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Systemctl Prometheus Start] **********************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Systemctl Prometheus Start name=prometheus, state=started, enabled=True] **********************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Create the alertmanager group] *******************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [monitoring : Create the alertmanager group name={{ prometheus_group }}, state=present, system=True] ********************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [monitoring : Create User Alertmanager] ************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [monitoring : Create User Alertmanager name={{ prometheus_user }}, create_home=False, shell=/bin/false] *****************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [monitoring : Create Directories For Alertmanager] *************************************************************************************************************************
-changed: [monitoring.ovirt.ru] => (item=/tmp/alertmanager)
-changed: [monitoring.ovirt.ru] => (item=/etc/alertmanager)
-changed: [monitoring.ovirt.ru] => (item=/var/lib/prometheus/alertmanager)
+TASK [monitoring : Create Directories For Alertmanager path={{ item }}, state=directory, owner={{ prometheus_user }}, group={{ prometheus_user }}] ***************************************************
+changed: [monitoring.golubevny.site] => (item=/tmp/alertmanager)
+changed: [monitoring.golubevny.site] => (item=/etc/alertmanager)
+changed: [monitoring.golubevny.site] => (item=/var/lib/prometheus/alertmanager)
 
-TASK [monitoring : Download And Unzipped Alertmanager] **************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Download And Unzipped Alertmanager src=https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz, dest={{ alertmanager_tmp_path }}, creates=/tmp/alertmanager/alertmanager-{{ alertmanager_version }}.linux-amd64, remote_src=True] ***
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Copy Bin Files From Unzipped to Alertmanager] ****************************************************************************************************************
-changed: [monitoring.ovirt.ru] => (item=alertmanager)
-changed: [monitoring.ovirt.ru] => (item=amtool)
+TASK [monitoring : Copy Bin Files From Unzipped to Alertmanager src={{ alertmanager_tmp_path }}/alertmanager-{{ alertmanager_version }}.linux-amd64/{{ item }}, dest={{ alertmanager_bin_path }}/, remote_src=True, mode=preserve, owner={{ prometheus_user }}, group={{ prometheus_user }}] ***
+changed: [monitoring.golubevny.site] => (item=alertmanager)
+changed: [monitoring.golubevny.site] => (item=amtool)
 
-TASK [monitoring : Copy Conf File From Unzipped to Alertmanager] ****************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Copy Conf File From Unzipped to Alertmanager src={{ alertmanager_tmp_path }}/alertmanager-{{ alertmanager_version }}.linux-amd64/alertmanager.yml, dest={{ alertmanager_config_path }}/{{ alertmanager_config_file }}, remote_src=True, mode=preserve, owner={{ prometheus_user }}, group={{ prometheus_user }}] ***
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : copy config] *************************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : copy config src=templates/alertmanager.yml.j2, dest={{ alertmanager_config_path }}/{{ alertmanager_config_file }}] ****************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Create File for Alertmanager Systemd] ************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Create File for Alertmanager Systemd src=templates/alertmanager.service.j2, dest=/etc/systemd/system/alertmanager.service] ********************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [monitoring : Systemctl Alertmanager Start] ********************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [monitoring : Systemctl Alertmanager Start name=alertmanager, state=started, enabled=True] ******************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Install dependencies] *******************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [grafana : Install dependencies name=gnupg,software-properties-common, state=present, update_cache=True] ****************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [grafana : Allow TCP Ports] ************************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Allow TCP Ports chain=INPUT, rule_num=1, action=insert, protocol=tcp, jump=ACCEPT, destination_port=3000] ****************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Import Grafana Apt Key] *****************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Import Grafana Apt Key url=https://packages.grafana.com/gpg.key, state=present] ******************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Add APT Repository] *********************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Add APT Repository repo=deb https://packages.grafana.com/oss/deb stable main, state=present] *****************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Install Grafana on Debian Family] *******************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Install Grafana on Debian Family name=grafana, state=latest] *************************************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : start service grafana-server] ***********************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : start service grafana-server name=grafana-server, state=started, enabled=True] *******************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : wait for service up] ********************************************************************************************************************************************
-FAILED - RETRYING: [monitoring.ovirt.ru]: wait for service up (120 retries left).
-FAILED - RETRYING: [monitoring.ovirt.ru]: wait for service up (119 retries left).
-FAILED - RETRYING: [monitoring.ovirt.ru]: wait for service up (118 retries left).
-ok: [monitoring.ovirt.ru]
+TASK [grafana : wait for service up url=http://127.0.0.1:3000, status_code=200] **********************************************************************************************************************
+FAILED - RETRYING: [monitoring.golubevny.site]: wait for service up (120 retries left).
+FAILED - RETRYING: [monitoring.golubevny.site]: wait for service up (119 retries left).
+FAILED - RETRYING: [monitoring.golubevny.site]: wait for service up (118 retries left).
+ok: [monitoring.golubevny.site]
 
-TASK [grafana : change admin password for Grafana gui] **************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [grafana : change admin password for Grafana gui _raw_params=grafana-cli admin reset-admin-password {{ grafana_admin_password }}] ***************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [grafana : Create/Update datasources file (provisioning)] ******************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Create/Update datasources file (provisioning) dest=/etc/grafana/provisioning/datasources/ansible.yml, content=apiVersion: 1
+deleteDatasources: []
+datasources:
+{{ grafana_datasources | to_nice_yaml }}
+, backup=False, owner=root, group=grafana, mode=416] ***
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Create local grafana dashboard directory] ***********************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [grafana : Create local grafana dashboard directory state=directory] ****************************************************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [grafana : create grafana dashboards data directory] ***********************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : create grafana dashboards data directory path={{ grafana_data_dir }}/dashboards, state=directory, owner=grafana, group=grafana, mode=493] ********************************************
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : download grafana dashboard from grafana.net to local directory] *************************************************************************************************
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '3662', 'revision_id': '2', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '9578', 'revision_id': '4', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '9628', 'revision_id': '7', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '1860', 'revision_id': '27', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '4271', 'revision_id': '4', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '7362', 'revision_id': '5', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '2428', 'revision_id': '7', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '15211', 'revision_id': '1', 'datasource': 'Prometheus'})
+TASK [grafana : download grafana dashboard from grafana.net to local directory creates={{ _tmp_dashboards.path }}/{{ item.dashboard_id }}.json, warn=False, _raw_params=curl --fail --compressed https://grafana.com/api/dashboards/{{ item.dashboard_id }}/revisions/{{ item.revision_id }}/download -o {{ _tmp_dashboards.path }}/{{ item.dashboard_id }}.json
+] ***
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '3662', 'revision_id': '2', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '9578', 'revision_id': '4', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '9628', 'revision_id': '7', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '1860', 'revision_id': '27', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '4271', 'revision_id': '4', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '7362', 'revision_id': '5', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '2428', 'revision_id': '7', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '15211', 'revision_id': '1', 'datasource': 'Prometheus'})
 
-TASK [grafana : Set the correct data source name in the dashboard] **************************************************************************************************************
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '3662', 'revision_id': '2', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '9578', 'revision_id': '4', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '9628', 'revision_id': '7', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '1860', 'revision_id': '27', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '4271', 'revision_id': '4', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '7362', 'revision_id': '5', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '2428', 'revision_id': '7', 'datasource': 'Prometheus'})
-ok: [monitoring.ovirt.ru] => (item={'dashboard_id': '15211', 'revision_id': '1', 'datasource': 'Prometheus'})
+TASK [grafana : Set the correct data source name in the dashboard dest={{ _tmp_dashboards.path }}/{{ item.dashboard_id }}.json, regexp="(?:\${)?DS_[A-Z0-9_-]+(?:})?", replace="{{ item.datasource }}"] ***
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '3662', 'revision_id': '2', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '9578', 'revision_id': '4', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '9628', 'revision_id': '7', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '1860', 'revision_id': '27', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '4271', 'revision_id': '4', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '7362', 'revision_id': '5', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '2428', 'revision_id': '7', 'datasource': 'Prometheus'})
+ok: [monitoring.golubevny.site] => (item={'dashboard_id': '15211', 'revision_id': '1', 'datasource': 'Prometheus'})
 
-TASK [grafana : Create/Update dashboards file (provisioning)] *******************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+TASK [grafana : Create/Update dashboards file (provisioning) dest=/etc/grafana/provisioning/dashboards/ansible.yml, content=apiVersion: 1
+providers:
+ - name: 'default'
+   orgId: 1
+   folder: ''
+   type: file
+   options:
+     path: "{{ grafana_data_dir }}/dashboards"
+, backup=False, owner=root, group=grafana, mode=420] ***
+changed: [monitoring.golubevny.site]
 
-TASK [grafana : Register previously copied dashboards] **************************************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [grafana : Register previously copied dashboards paths={{ grafana_data_dir }}/dashboards, hidden=True, patterns=['*.json']] *********************************************************************
+skipping: [monitoring.golubevny.site]
 
-TASK [grafana : Register dashboards to copy] ************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+TASK [grafana : Register dashboards to copy paths={{ _tmp_dashboards.path }}, patterns=['*']] ********************************************************************************************************
+ok: [monitoring.golubevny.site]
 
-TASK [grafana : Import grafana dashboards] **************************************************************************************************************************************
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/9578.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 307942, 'inode': 400382, 'dev': 64514, 'nlink': 1, 'atime': 1662763957.9240286, 'mtime': 1662763947.9880037, 'ctime': 1662763947.9880037, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/4271.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 33577, 'inode': 400384, 'dev': 64514, 'nlink': 1, 'atime': 1662763960.7280357, 'mtime': 1662763960.7280357, 'ctime': 1662763960.7280357, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/9628.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 71832, 'inode': 400381, 'dev': 64514, 'nlink': 1, 'atime': 1662763958.860031, 'mtime': 1662763958.860031, 'ctime': 1662763958.860031, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/3662.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 85558, 'inode': 400389, 'dev': 64514, 'nlink': 1, 'atime': 1662763956.972026, 'mtime': 1662763956.972026, 'ctime': 1662763956.972026, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/1860.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 387696, 'inode': 400383, 'dev': 64514, 'nlink': 1, 'atime': 1662763959.7920332, 'mtime': 1662763959.7920332, 'ctime': 1662763959.7920332, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/7362.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 129775, 'inode': 400385, 'dev': 64514, 'nlink': 1, 'atime': 1662763962.7360406, 'mtime': 1662763962.7360406, 'ctime': 1662763962.7360406, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/15211.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 78766, 'inode': 400388, 'dev': 64514, 'nlink': 1, 'atime': 1662763964.7080455, 'mtime': 1662763955.712023, 'ctime': 1662763955.712023, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
-changed: [monitoring.ovirt.ru] => (item={'path': '/tmp/ansible.5_jq0h_0/2428.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 122985, 'inode': 400386, 'dev': 64514, 'nlink': 1, 'atime': 1662763963.7240431, 'mtime': 1662763963.7240431, 'ctime': 1662763963.7240431, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+TASK [grafana : Import grafana dashboards src={{ item.path }}, dest={{ grafana_data_dir }}/dashboards, remote_src=True] ******************************************************************************
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/9578.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 307942, 'inode': 400472, 'dev': 64514, 'nlink': 1, 'atime': 1666454976.7299066, 'mtime': 1666454963.8018644, 'ctime': 1666454963.8018644, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/4271.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 33577, 'inode': 400474, 'dev': 64514, 'nlink': 1, 'atime': 1666454980.5459192, 'mtime': 1666454980.5459192, 'ctime': 1666454980.5459192, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/9628.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 71832, 'inode': 400471, 'dev': 64514, 'nlink': 1, 'atime': 1666454978.0019107, 'mtime': 1666454978.0019107, 'ctime': 1666454978.0019107, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/3662.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 85558, 'inode': 400479, 'dev': 64514, 'nlink': 1, 'atime': 1666454975.4499023, 'mtime': 1666454975.4499023, 'ctime': 1666454975.4499023, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/1860.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 387756, 'inode': 400473, 'dev': 64514, 'nlink': 1, 'atime': 1666454979.265915, 'mtime': 1666454979.265915, 'ctime': 1666454979.265915, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/7362.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 129775, 'inode': 400475, 'dev': 64514, 'nlink': 1, 'atime': 1666454981.7939234, 'mtime': 1666454981.7939234, 'ctime': 1666454981.7939234, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/15211.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 78766, 'inode': 400478, 'dev': 64514, 'nlink': 1, 'atime': 1666454984.3579319, 'mtime': 1666454973.793897, 'ctime': 1666454973.793897, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
+changed: [monitoring.golubevny.site] => (item={'path': '/tmp/ansible.r4gslrzd/2428.json', 'mode': '0644', 'isdir': False, 'ischr': False, 'isblk': False, 'isreg': True, 'isfifo': False, 'islnk': False, 'issock': False, 'uid': 0, 'gid': 0, 'size': 122996, 'inode': 400476, 'dev': 64514, 'nlink': 1, 'atime': 1666454983.0819275, 'mtime': 1666454983.0819275, 'ctime': 1666454983.0819275, 'gr_name': 'root', 'pw_name': 'root', 'wusr': True, 'rusr': True, 'xusr': False, 'wgrp': False, 'rgrp': True, 'xgrp': False, 'woth': False, 'roth': True, 'xoth': False, 'isuid': False, 'isgid': False})
 
-TASK [grafana : Get dashboard lists] ********************************************************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [grafana : Get dashboard lists _dashboards_present_list={{ _dashboards_present | json_query('files[*].path') | default([]) }}, _dashboards_copied_list={{ _dashboards_copied | json_query('results[*].dest') | default([]) }}] ***
+skipping: [monitoring.golubevny.site]
 
-TASK [grafana : Remove dashboards not present on deployer machine (synchronize)] ************************************************************************************************
-skipping: [monitoring.ovirt.ru]
+TASK [grafana : Remove dashboards not present on deployer machine (synchronize) path={{ item }}, state=absent] ***************************************************************************************
+skipping: [monitoring.golubevny.site]
 
-RUNNING HANDLER [monitoring : restart prometheus] *******************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+RUNNING HANDLER [monitoring : restart prometheus daemon_reload=True, enabled=True, name=prometheus, state=restarted] *********************************************************************************
+changed: [monitoring.golubevny.site]
 
-RUNNING HANDLER [monitoring : restart alertmanager] *****************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+RUNNING HANDLER [monitoring : restart alertmanager name=alertmanager, state=restarted] ***************************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-RUNNING HANDLER [grafana : grafana systemd] *************************************************************************************************************************************
-ok: [monitoring.ovirt.ru]
+RUNNING HANDLER [grafana : grafana systemd name=grafana-server, enabled=True, state=started] *********************************************************************************************************
+ok: [monitoring.golubevny.site]
 
-RUNNING HANDLER [grafana : restart grafana] *************************************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+RUNNING HANDLER [grafana : restart grafana name=grafana-server, state=restarted] *********************************************************************************************************************
+changed: [monitoring.golubevny.site]
 
-RUNNING HANDLER [grafana : Set privileges on provisioned dashboards] ************************************************************************************************************
-changed: [monitoring.ovirt.ru]
+RUNNING HANDLER [grafana : Set privileges on provisioned dashboards path={{ grafana_data_dir }}/dashboards, recurse=True, owner=grafana, group=grafana, mode=416] ************************************
+changed: [monitoring.golubevny.site]
 
-RUNNING HANDLER [grafana : Set privileges on provisioned dashboards directory] **************************************************************************************************
-changed: [monitoring.ovirt.ru]
+RUNNING HANDLER [grafana : Set privileges on provisioned dashboards directory path={{ grafana_data_dir }}/dashboards, state=directory, recurse=False, mode=493] **************************************
+changed: [monitoring.golubevny.site]
 
-PLAY RECAP **********************************************************************************************************************************************************************
-monitoring.ovirt.ru        : ok=43   changed=26   unreachable=0    failed=0    skipped=8    rescued=0    ignored=0
+PLAY RECAP *******************************************************************************************************************************************************************************************
+monitoring.golubevny.site  : ok=44   changed=33   unreachable=0    failed=0    skipped=7    rescued=0    ignored=0 
 
 ```
 
 </details>
 
-Что мы получаем: 
+В результате: 
 
-`Prometheus`, доступен по адресу `https://prometheus.ovirt.ru/`
+`Prometheus`, доступен по адресу `https://prometheus.golubevny.site/`
 
-![39](img/img039.PNG)
+![39](pic/prometheus.png)
 
-![40](img/img040.PNG)
+![40](pic/prometheus.targets.png)
 
-`Alertmanager`, доступен по адресу `https://alertmanager.ovirt.ru/`
+`Alertmanager`, доступен по адресу `https://alertmanager.golubevny.site/`
 
-![41](img/img041.PNG)
+![41](pic/alertmanager.png)
 
-`Grafana`, доступен по адресу `https://grafana.ovirt.ru/`
+`Grafana`, доступен по адресу `https://grafana.golubevny.site/`
 
-![42](img/img042.PNG)
+![42](pic/grafana.png)
 
 Дашборды
 
-![43](img/img043.PNG)
+![43](pic/grafana.gashboards_set.png)
 
 Дашборд отображающий метрики из Node Exporter по всем серверам
 
-![44](img/img044.PNG)
+![44](pic/grafana.dashboards_view.png)
 
-Для проверки `Alertmanager`, погасим один из серверов, допустим `runner`
+Для проверки `Alertmanager`, погасим один из серверов БД - `db02`:
 
-![45](img/img045.PNG)
+![45](pic/YC_db02.stopped.png)
 
-Проверим `Prometheus`
+Проверим `Prometheus`:
 
-![46](img/img046.PNG)
+![46](pic/Prometheus.targets_alert.png)
 
-![47](img/img047.PNG)
+![47](pic/prometheus.alerts.png)
 
-Проверим `Alertmanager`
+Проверим `Alertmanager`:
 
-![48](img/img048.PNG)
+![48](pic/alertmanager.alerts.png)
 
-И `Grafana`
+И `Grafana`:
 
-![49](img/img049.PNG)
+![49](pic/grafana.alerts.png)
 
 Видим что везде тревога есть.
 
@@ -3816,47 +2122,28 @@ monitoring.ovirt.ru        : ok=43   changed=26   unreachable=0    failed=0    s
 
 Работа по `https`
 
-![50](img/img050.PNG)
+![50](pic/certificate_golubevny.site.png)
 
-`https://www.ovirt.ru` (WordPress)
+`https://www.golubevny.site` (WordPress)
 
-![51](img/img051.PNG)
+![51](pic/wordpress.helloworld.png)
 
-`https://gitlab.ovirt.ru` (Gitlab)
+`https://gitlab.golubevny.site` (Gitlab)
 
-![52](img/img052.PNG)
+![52](pic/gitlab.pipeline.passed.png)
 
-`https://grafana.ovirt.ru` (Grafana)
+`https://grafana.golubevny.site` (Grafana)
 
-![53](img/img053.PNG)
+![53](pic/grafana.dashboards_view.png)
 
-`https://prometheus.ovirt.ru` (Prometheus)
+`https://prometheus.golubevny.site` (Prometheus)
 
-![54](img/img054.PNG)
+![54](pic/prometheus.png)
 
-`https://alertmanager.ovirt.ru` (Alert Manager)
+`https://alertmanager.golubevny.site` (Alert Manager)
 
-![55](img/img055.PNG)
-
----
+![55](pic/alertmanager.png)
 
 ---
-## Как правильно задавать вопросы дипломному руководителю?
 
-**Что поможет решить большинство частых проблем:**
-
-1. Попробовать найти ответ сначала самостоятельно в интернете или в
-  материалах курса и ДЗ и только после этого спрашивать у дипломного
-  руководителя. Навык поиска ответов пригодится вам в профессиональной
-  деятельности.
-2. Если вопросов больше одного, то присылайте их в виде нумерованного
-  списка. Так дипломному руководителю будет проще отвечать на каждый из
-  них.
-3. При необходимости прикрепите к вопросу скриншоты и стрелочкой
-  покажите, где не получается.
-
-**Что может стать источником проблем:**
-
-1. Вопросы вида «Ничего не работает. Не запускается. Всё сломалось». Дипломный руководитель не сможет ответить на такой вопрос без дополнительных уточнений. Цените своё время и время других.
-2. Откладывание выполнения курсового проекта на последний момент.
-3. Ожидание моментального ответа на свой вопрос. Дипломные руководители работающие разработчики, которые занимаются, кроме преподавания, своими проектами. Их время ограничено, поэтому постарайтесь задавать правильные вопросы, чтобы получать быстрые ответы :)
+---
