@@ -52,7 +52,7 @@ diplom-my
 
 ![1](pic/Reg.ru.png)
 
-Делегировал его `DNS` на `ns1.yandexcloud.net` и `ns2.yandexcloud.net`, т.к. буду использовать `DNS` от `YC`. Для этого создадим файл `dns.tf` и укажем в нем:
+Делегировал его `DNS` на `ns1.yandexcloud.net` и `ns2.yandexcloud.net`, так как будет использоваться `DNS` от `YC`. Для этого создадим файл `dns.tf` и укажем в нем:
 
 ```hcl
 resource "yandex_dns_zone" "diplom" {
@@ -173,7 +173,7 @@ resource "yandex_vpc_address" "addr" {
 
 Использован сервисный аккаунт - `robot`.
 Бекенд подготавливается отдельным конфигом терраформа [s3](scripts/terraform/s3/), 
-а затем он исподьзуется в качестве хранилища `backend` для `workspace` ["stage"](scripts/terraform/stage).
+а затем он используется в качестве хранилища `backend` для `workspace` ["stage"](scripts/terraform/stage).
 
 Используется один воркспейс `"stage"`.
 
@@ -245,7 +245,6 @@ terraform apply --auto-approve
 
 Прописываются `DNS` `YC` в соответствии с заданием.
 
-В `output.json` выводится информацию о всех выданных `ip` адресах, для дальнейшего использования с `Ansible`.
 
 Состояние воркспейса `stage` сохраняется в `S3` бакете `YC`.
 
@@ -307,7 +306,7 @@ echo "Export compleate!"
 
 ---
 
-Тут использовал данные материалы:
+Использовались следующие материалы:
 
 https://github.com/coopdevs/certbot_nginx
 
@@ -319,19 +318,8 @@ https://github.com/geerlingguy/ansible-role-certbot/
 letsencrypt_staging: true
 ```
 
-Переходим в директорию с `Ansible` и выполняем `ansible-playbook proxy.yml -i hosts`
+Переходим в директорию с `Ansible` и выполняем `ansible-playbook proxy.yml` :
 
-![5](pic/certificate_golubevny.site.png)
-
-![6](pic/golubevny.site.png)
-
-![7](pic/gitlab.golubevny.site.png)
-
-![8](pic/grafana.golubevny.site.png)
-
-![9](pic/prometheus.golubevny.site.png)
-
-![10](pic/alertmanager.golubevny.site.png)
 
 <details>
 <summary>Вывод Ansible</summary>
@@ -397,6 +385,17 @@ golubevny.site             : ok=14   changed=10   unreachable=0    failed=0    s
 
 ---
 
+![5](pic/certificate_golubevny.site.png)
+
+![6](pic/golubevny.site.png)
+
+![7](pic/gitlab.golubevny.site.png)
+
+![8](pic/grafana.golubevny.site.png)
+
+![9](pic/prometheus.golubevny.site.png)
+
+![10](pic/alertmanager.golubevny.site.png)
 ___
 ### Установка кластера MySQL
 
@@ -978,7 +977,7 @@ gitlab_runner_coordinator_url: 'http://gitlab.{{ domain_name }}'
 gitlab_runner_registration_token: 'GR1348941mRspncv4vqG9yCwuCTHv'
 ```
 
-Выполняем `ansible-playbook runner.yml -i hosts`. Использовал готовую роль, чуть изменив, много лишних `Task`ов.
+Выполняем `ansible-playbook runner.yml`.
 
 <details>
 <summary>Вывод Ansible</summary>
@@ -1643,24 +1642,24 @@ runner.golubevny.site      : ok=81   changed=19   unreachable=0    failed=0    s
 
 ![31](pic/gitlab.runner.png)
 
-В `CI/CD` -> `Pipelines` видим что `pipeline` выполнился.
+В `CI/CD` -> `Pipelines` видим что `pipeline` выполнился. Изначально вываливалась ошибка, что не введена кодовая фраза на закрытый ключ. Удалил кодовую фразу с приватного ключа, обновил переменную ssh.  
 
 ![32](pic/gitlab.pipeline.passed.png)
 
 ![33](pic/gitlab.pipelines.jobs.png)
 
-Теперь сделаем коммит (добавим файл `hello.txt`) в репозиторий и еще раз глянем на `Pipelines`
+Теперь сделаем коммит (добавим файл `hello.txt`) в репозиторий и еще раз глянем на `Pipelines`:
 
 ![34](pic/gitlab.new_commit.png)
 
 
-Проверим `Pipelines`, видим что он выполнился
+Проверим `Pipelines`, убедимся что он выполнился:
 
 ![36](pic/gitlab.pipelines.new_commit.png)
 
 ![37](pic/gitlab.pipelines.jobs.new_commit.png)
 
-И сам файл на сервере `wordpress`:
+Проверим файл на сервере `wordpress`:
 
 
 ![38](pic/wordpress.hello.txt.png)
@@ -2061,19 +2060,19 @@ monitoring.golubevny.site  : ok=44   changed=33   unreachable=0    failed=0    s
 
 ![40](pic/prometheus.targets.png)
 
-`Alertmanager`, доступен по адресу `https://alertmanager.golubevny.site/`
+`Alertmanager`, доступен по адресу `https://alertmanager.golubevny.site/`:
 
 ![41](pic/alertmanager.png)
 
-`Grafana`, доступен по адресу `https://grafana.golubevny.site/`
+`Grafana`, доступен по адресу `https://grafana.golubevny.site/`:
 
 ![42](pic/grafana.png)
 
-Дашборды
+Дашборды:
 
 ![43](pic/grafana.gashboards_set.png)
 
-Дашборд отображающий метрики из Node Exporter по всем серверам
+Дашборд отображающий метрики из Node Exporter по всем серверам:
 
 ![44](pic/grafana.dashboards_view.png)
 
@@ -2120,27 +2119,27 @@ monitoring.golubevny.site  : ok=44   changed=33   unreachable=0    failed=0    s
 
 Роли [Ansible](scripts/ansible)
 
-Работа по `https`
+Работа по `https`:
 
 ![50](pic/certificate_golubevny.site.png)
 
-`https://www.golubevny.site` (WordPress)
+`https://www.golubevny.site` (WordPress):
 
 ![51](pic/wordpress.helloworld.png)
 
-`https://gitlab.golubevny.site` (Gitlab)
+`https://gitlab.golubevny.site` (Gitlab):
 
 ![52](pic/gitlab.pipeline.passed.png)
 
-`https://grafana.golubevny.site` (Grafana)
+`https://grafana.golubevny.site` (Grafana):
 
 ![53](pic/grafana.dashboards_view.png)
 
-`https://prometheus.golubevny.site` (Prometheus)
+`https://prometheus.golubevny.site` (Prometheus):
 
 ![54](pic/prometheus.png)
 
-`https://alertmanager.golubevny.site` (Alert Manager)
+`https://alertmanager.golubevny.site` (Alert Manager):
 
 ![55](pic/alertmanager.png)
 
